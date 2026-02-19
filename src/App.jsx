@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "./supabase";
 
-// 〆切: 2026年3月5日 12:00 JST（WBC最初の試合開始）
 const DEADLINE = new Date("2026-03-05T12:00:00+09:00");
+const LS_KEY = "wbc2026_nickname";
 
 const TEAMS = [
   { name: "日本", flag: "🇯🇵", pool: "C" },
@@ -27,6 +27,13 @@ const TEAMS = [
   { name: "ニカラグア", flag: "🇳🇮", pool: "D" },
 ];
 
+function getSavedNickname() {
+  try { return localStorage.getItem(LS_KEY) || ""; } catch { return ""; }
+}
+function saveNickname(name) {
+  try { localStorage.setItem(LS_KEY, name); } catch {}
+}
+
 function formatTime(dateStr) {
   const d = new Date(dateStr);
   const m = (d.getMonth() + 1).toString().padStart(2, "0");
@@ -38,56 +45,29 @@ function formatTime(dateStr) {
 
 function useCountdown() {
   const [now, setNow] = useState(new Date());
-  useEffect(() => {
-    const timer = setInterval(() => setNow(new Date()), 1000);
-    return () => clearInterval(timer);
-  }, []);
+  useEffect(() => { const t = setInterval(() => setNow(new Date()), 1000); return () => clearInterval(t); }, []);
   const diff = DEADLINE - now;
-  const expired = diff <= 0;
-  if (expired) return { expired: true, days: 0, hours: 0, minutes: 0, seconds: 0 };
-  const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-  const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
-  const minutes = Math.floor((diff / (1000 * 60)) % 60);
-  const seconds = Math.floor((diff / 1000) % 60);
-  return { expired: false, days, hours, minutes, seconds };
+  if (diff <= 0) return { expired: true, days: 0, hours: 0, minutes: 0, seconds: 0 };
+  return { expired: false, days: Math.floor(diff / 864e5), hours: Math.floor((diff / 36e5) % 24), minutes: Math.floor((diff / 6e4) % 60), seconds: Math.floor((diff / 1e3) % 60) };
 }
 
 function CountdownBanner({ countdown }) {
   if (countdown.expired) {
     return (
-      <div style={{
-        margin: "0 0 16px", padding: "14px 12px", borderRadius: 14, textAlign: "center",
-        background: "linear-gradient(135deg, rgba(239,83,80,0.15), rgba(239,83,80,0.05))",
-        border: "1px solid rgba(239,83,80,0.3)",
-      }}>
+      <div style={{ margin: "0 0 16px", padding: "14px 12px", borderRadius: 14, textAlign: "center", background: "linear-gradient(135deg, rgba(239,83,80,0.15), rgba(239,83,80,0.05))", border: "1px solid rgba(239,83,80,0.3)" }}>
         <div style={{ fontSize: 14, fontWeight: 700, color: "#ef5350", marginBottom: 2 }}>🔒 投票は締め切りました</div>
         <div style={{ fontSize: 11, color: "#8892b0" }}>WBC 2026 開幕！結果をお楽しみに</div>
       </div>
     );
   }
-  const units = [
-    { value: countdown.days, label: "日" },
-    { value: countdown.hours, label: "時間" },
-    { value: countdown.minutes, label: "分" },
-    { value: countdown.seconds, label: "秒" },
-  ];
+  const units = [{ value: countdown.days, label: "日" }, { value: countdown.hours, label: "時間" }, { value: countdown.minutes, label: "分" }, { value: countdown.seconds, label: "秒" }];
   return (
-    <div style={{
-      margin: "0 0 16px", padding: "14px 12px", borderRadius: 14, textAlign: "center",
-      background: "linear-gradient(135deg, rgba(230,200,102,0.08), rgba(230,200,102,0.02))",
-      border: "1px solid rgba(230,200,102,0.15)",
-    }}>
+    <div style={{ margin: "0 0 16px", padding: "14px 12px", borderRadius: 14, textAlign: "center", background: "linear-gradient(135deg, rgba(230,200,102,0.08), rgba(230,200,102,0.02))", border: "1px solid rgba(230,200,102,0.15)" }}>
       <div style={{ fontSize: 11, color: "#8892b0", marginBottom: 8, fontWeight: 600 }}>⏰ 投票〆切まで（3/5 12:00 開幕戦キックオフ）</div>
       <div style={{ display: "flex", justifyContent: "center", gap: 8 }}>
         {units.map((u, i) => (
           <div key={i} style={{ textAlign: "center", minWidth: 52 }}>
-            <div style={{
-              fontSize: 24, fontWeight: 800, color: "#e6c866",
-              fontFamily: "'JetBrains Mono', monospace", lineHeight: 1,
-              background: "rgba(0,0,0,0.3)", borderRadius: 8, padding: "8px 6px",
-            }}>
-              {String(u.value).padStart(2, "0")}
-            </div>
+            <div style={{ fontSize: 24, fontWeight: 800, color: "#e6c866", fontFamily: "'JetBrains Mono', monospace", lineHeight: 1, background: "rgba(0,0,0,0.3)", borderRadius: 8, padding: "8px 6px" }}>{String(u.value).padStart(2, "0")}</div>
             <div style={{ fontSize: 9, color: "#5a6490", marginTop: 4, fontWeight: 600 }}>{u.label}</div>
           </div>
         ))}
@@ -97,50 +77,29 @@ function CountdownBanner({ countdown }) {
 }
 
 function aggregateBets(bets) {
-  const winnerData = {};
-  const exactaData = {};
-  const recent = [];
+  const winnerData = {}, exactaData = {}, recent = [];
   bets.forEach((b) => {
-    if (b.match_id === "winner") {
-      if (!winnerData[b.team_side]) winnerData[b.team_side] = { count: 0, total: 0 };
-      winnerData[b.team_side].count += 1;
-      winnerData[b.team_side].total += b.amount;
-    } else if (b.match_id === "exacta") {
-      if (!exactaData[b.team_side]) exactaData[b.team_side] = { count: 0, total: 0 };
-      exactaData[b.team_side].count += 1;
-      exactaData[b.team_side].total += b.amount;
-    }
+    if (b.match_id === "winner") { if (!winnerData[b.team_side]) winnerData[b.team_side] = { count: 0, total: 0 }; winnerData[b.team_side].count += 1; winnerData[b.team_side].total += b.amount; }
+    else if (b.match_id === "exacta") { if (!exactaData[b.team_side]) exactaData[b.team_side] = { count: 0, total: 0 }; exactaData[b.team_side].count += 1; exactaData[b.team_side].total += b.amount; }
   });
-  const sorted = [...bets].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-  sorted.forEach((b) => {
+  [...bets].sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).forEach((b) => {
     const team = TEAMS.find((t) => t.name === (b.match_id === "winner" ? b.team_side : b.team_side.split("→")[0]));
-    recent.push({
-      name: b.user_name, type: b.match_id,
-      pick: b.match_id === "winner" ? `${team?.flag || ""} ${b.team_side}` : `${b.team_side.replace("→", " → ")}`,
-      amount: b.amount, time: b.created_at,
-    });
+    recent.push({ name: b.user_name, type: b.match_id, pick: b.match_id === "winner" ? `${team?.flag || ""} ${b.team_side}` : `${b.team_side.replace("→", " → ")}`, amount: b.amount, time: b.created_at });
   });
   return { winnerData, exactaData, recent };
 }
 
 function calcOdds(data, teams) {
-  let total = 0;
-  Object.values(data).forEach((d) => { total += d.total; });
+  let total = 0; Object.values(data).forEach((d) => { total += d.total; });
   const result = {};
-  teams.forEach((name) => {
-    const d = data[name] || { count: 0, total: 0 };
-    result[name] = { count: d.count, total: d.total, odds: d.total > 0 && total > 0 ? (total / d.total).toFixed(1) : "-", pct: total > 0 ? Math.round((d.total / total) * 100) : 0 };
-  });
+  teams.forEach((name) => { const d = data[name] || { count: 0, total: 0 }; result[name] = { count: d.count, total: d.total, odds: d.total > 0 && total > 0 ? (total / d.total).toFixed(1) : "-", pct: total > 0 ? Math.round((d.total / total) * 100) : 0 }; });
   return result;
 }
 
 function calcExactaOdds(data) {
-  let total = 0;
-  Object.values(data).forEach((d) => { total += d.total; });
+  let total = 0; Object.values(data).forEach((d) => { total += d.total; });
   const result = {};
-  Object.entries(data).forEach(([key, d]) => {
-    result[key] = { count: d.count, total: d.total, odds: d.total > 0 && total > 0 ? (total / d.total).toFixed(1) : "-", pct: total > 0 ? Math.round((d.total / total) * 100) : 0 };
-  });
+  Object.entries(data).forEach(([key, d]) => { result[key] = { count: d.count, total: d.total, odds: d.total > 0 && total > 0 ? (total / d.total).toFixed(1) : "-", pct: total > 0 ? Math.round((d.total / total) * 100) : 0 }; });
   return result;
 }
 
@@ -152,8 +111,7 @@ function TeamButton({ team, selected, onClick, odds, disabled }) {
       background: isSelected ? "linear-gradient(135deg, #e6c86622, #d4a84322)" : "rgba(255,255,255,0.03)",
       border: isSelected ? "2px solid #e6c866" : "2px solid rgba(255,255,255,0.06)",
       cursor: disabled ? "default" : "pointer", transition: "all 0.2s", textAlign: "left",
-      boxShadow: isSelected ? "0 0 20px rgba(230,200,102,0.1)" : "none", boxSizing: "border-box",
-      opacity: disabled ? 0.6 : 1,
+      boxShadow: isSelected ? "0 0 20px rgba(230,200,102,0.1)" : "none", boxSizing: "border-box", opacity: disabled ? 0.6 : 1,
     }}>
       <span style={{ fontSize: 26, lineHeight: 1, flexShrink: 0 }}>{team.flag}</span>
       <div style={{ flex: 1, minWidth: 0, overflow: "hidden" }}>
@@ -171,23 +129,19 @@ function TeamButton({ team, selected, onClick, odds, disabled }) {
 }
 
 function BetForm({ onSubmit, label, disabled }) {
-  const [name, setName] = useState("");
+  const [name, setName] = useState(() => getSavedNickname());
   const [amount, setAmount] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const handleSubmit = async () => {
     if (!name.trim() || !amount || parseInt(amount) <= 0) return;
     setSubmitting(true);
+    saveNickname(name.trim());
     await onSubmit(name.trim(), parseInt(amount));
     setSubmitting(false);
-    setName("");
     setAmount("");
   };
   return (
-    <div style={{
-      padding: 16, borderRadius: 14, marginBottom: 16,
-      background: "linear-gradient(135deg, #1a1f3a, #141830)", border: "1px solid rgba(230,200,102,0.25)",
-      animation: "fadeIn 0.3s ease", boxShadow: "0 8px 32px rgba(0,0,0,0.6)",
-    }}>
+    <div style={{ padding: 16, borderRadius: 14, marginBottom: 16, background: "linear-gradient(135deg, #1a1f3a, #141830)", border: "1px solid rgba(230,200,102,0.25)", animation: "fadeIn 0.3s ease", boxShadow: "0 8px 32px rgba(0,0,0,0.6)" }}>
       <div style={{ fontSize: 12, color: "#e6c866", fontWeight: 700, marginBottom: 10, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{label}</div>
       <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
         <input type="text" placeholder="名前" value={name} onChange={(e) => setName(e.target.value)}
@@ -212,11 +166,7 @@ function BetForm({ onSubmit, label, disabled }) {
 
 function SuccessToast({ message }) {
   if (!message) return null;
-  return (
-    <div style={{ position: "fixed", bottom: 24, left: "50%", transform: "translateX(-50%)", padding: "12px 24px", borderRadius: 12, background: "rgba(76,175,80,0.95)", color: "#fff", fontSize: 14, fontWeight: 600, zIndex: 9999, boxShadow: "0 8px 32px rgba(0,0,0,0.4)", animation: "fadeIn 0.3s ease", maxWidth: "90%", textAlign: "center" }}>
-      ✅ {message}
-    </div>
-  );
+  return <div style={{ position: "fixed", bottom: 24, left: "50%", transform: "translateX(-50%)", padding: "12px 24px", borderRadius: 12, background: "rgba(76,175,80,0.95)", color: "#fff", fontSize: 14, fontWeight: 600, zIndex: 9999, boxShadow: "0 8px 32px rgba(0,0,0,0.4)", animation: "fadeIn 0.3s ease", maxWidth: "90%", textAlign: "center" }}>✅ {message}</div>;
 }
 
 function RankingBar({ items, colorA, colorB }) {
@@ -272,8 +222,7 @@ function RecentFeed({ recentBets, onShowAll }) {
     <div style={{ margin: "0 0 16px", background: "linear-gradient(135deg, #1a1f3a, #0d1225)", borderRadius: 14, padding: "14px 14px", border: "1px solid rgba(255,255,255,0.06)" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
         <div style={{ fontSize: 13, fontWeight: 700, color: "#e6c866", display: "flex", alignItems: "center", gap: 6 }}>
-          <span style={{ display: "inline-block", width: 8, height: 8, borderRadius: "50%", background: "#4caf50", animation: "pulse 2s infinite" }} />
-          最新ベット
+          <span style={{ display: "inline-block", width: 8, height: 8, borderRadius: "50%", background: "#4caf50", animation: "pulse 2s infinite" }} />最新ベット
         </div>
         <button onClick={onShowAll} style={{ background: "rgba(230,200,102,0.1)", border: "1px solid rgba(230,200,102,0.25)", color: "#e6c866", fontSize: 11, fontWeight: 700, padding: "4px 10px", borderRadius: 6, cursor: "pointer" }}>すべて見る →</button>
       </div>
@@ -309,20 +258,14 @@ export default function App() {
 
   const loadData = useCallback(async () => {
     const { data, error } = await supabase.from("bets").select("*");
-    if (!error && data) {
-      const agg = aggregateBets(data);
-      setWinnerData(agg.winnerData);
-      setExactaData(agg.exactaData);
-      setRecentBets(agg.recent);
-    }
+    if (!error && data) { const agg = aggregateBets(data); setWinnerData(agg.winnerData); setExactaData(agg.exactaData); setRecentBets(agg.recent); }
     setLoading(false);
   }, []);
 
   useEffect(() => { loadData(); }, [loadData]);
-
   useEffect(() => {
-    const channel = supabase.channel("bets-realtime").on("postgres_changes", { event: "INSERT", schema: "public", table: "bets" }, () => { loadData(); }).subscribe();
-    return () => { supabase.removeChannel(channel); };
+    const ch = supabase.channel("bets-realtime").on("postgres_changes", { event: "INSERT", schema: "public", table: "bets" }, () => { loadData(); }).subscribe();
+    return () => { supabase.removeChannel(ch); };
   }, [loadData]);
 
   const showToast = (msg) => { setToast(msg); setTimeout(() => setToast(""), 2500); };
@@ -348,9 +291,7 @@ export default function App() {
   Object.values(winnerData).forEach((d) => { totalBets += d.count; totalAmount += d.total; });
   Object.values(exactaData).forEach((d) => { totalBets += d.count; totalAmount += d.total; });
 
-  if (loading) {
-    return <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#080c1a", color: "#e6c866", fontSize: 18, fontFamily: "'JetBrains Mono', monospace" }}>⚾ Loading...</div>;
-  }
+  if (loading) return <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#080c1a", color: "#e6c866", fontSize: 18, fontFamily: "'JetBrains Mono', monospace" }}>⚾ Loading...</div>;
 
   return (
     <div style={{ minHeight: "100vh", background: "linear-gradient(180deg, #080c1a 0%, #0a0f24 50%, #080c1a 100%)", fontFamily: "'Noto Sans JP', 'Helvetica Neue', sans-serif", color: "#e0e6ff", maxWidth: 480, margin: "0 auto", overflowX: "hidden" }}>
@@ -376,7 +317,6 @@ export default function App() {
       </div>
 
       <div style={{ padding: "0 12px" }}>
-        {/* カウントダウン */}
         <CountdownBanner countdown={countdown} />
 
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 16 }}>
@@ -401,7 +341,6 @@ export default function App() {
           ))}
         </div>
 
-        {/* ===== 優勝予想モード ===== */}
         {mode === "winner" && (
           <div style={{ animation: "fadeIn 0.3s ease" }}>
             {winnerPick && !countdown.expired && (
@@ -417,14 +356,11 @@ export default function App() {
               </div>
             )}
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              {TEAMS.map((team) => (
-                <TeamButton key={team.name} team={team} selected={winnerPick} onClick={setWinnerPick} odds={winnerOdds[team.name]} disabled={countdown.expired} />
-              ))}
+              {TEAMS.map((team) => (<TeamButton key={team.name} team={team} selected={winnerPick} onClick={setWinnerPick} odds={winnerOdds[team.name]} disabled={countdown.expired} />))}
             </div>
           </div>
         )}
 
-        {/* ===== 2連単モード ===== */}
         {mode === "exacta" && (
           <div style={{ animation: "fadeIn 0.3s ease" }}>
             {first && second && !countdown.expired && (
@@ -432,30 +368,16 @@ export default function App() {
                 <div style={{ textAlign: "center", marginBottom: 14, padding: "14px", borderRadius: 14, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
                   <div style={{ fontSize: 11, color: "#8892b0", marginBottom: 8 }}>あなたの予想</div>
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 12 }}>
-                    <div style={{ textAlign: "center" }}>
-                      <div style={{ fontSize: 30 }}>{TEAMS.find((t) => t.name === first)?.flag}</div>
-                      <div style={{ fontSize: 12, fontWeight: 700, color: "#e6c866", marginTop: 4 }}>{first}</div>
-                      <div style={{ fontSize: 10, color: "#8892b0" }}>🥇 優勝</div>
-                    </div>
+                    <div style={{ textAlign: "center" }}><div style={{ fontSize: 30 }}>{TEAMS.find((t) => t.name === first)?.flag}</div><div style={{ fontSize: 12, fontWeight: 700, color: "#e6c866", marginTop: 4 }}>{first}</div><div style={{ fontSize: 10, color: "#8892b0" }}>🥇 優勝</div></div>
                     <div style={{ fontSize: 18, color: "#3a4270", fontWeight: 800 }}>→</div>
-                    <div style={{ textAlign: "center" }}>
-                      <div style={{ fontSize: 30 }}>{TEAMS.find((t) => t.name === second)?.flag}</div>
-                      <div style={{ fontSize: 12, fontWeight: 700, color: "#90a4ae", marginTop: 4 }}>{second}</div>
-                      <div style={{ fontSize: 10, color: "#8892b0" }}>🥈 準優勝</div>
-                    </div>
+                    <div style={{ textAlign: "center" }}><div style={{ fontSize: 30 }}>{TEAMS.find((t) => t.name === second)?.flag}</div><div style={{ fontSize: 12, fontWeight: 700, color: "#90a4ae", marginTop: 4 }}>{second}</div><div style={{ fontSize: 10, color: "#8892b0" }}>🥈 準優勝</div></div>
                   </div>
-                  {exactaOdds[`${first}→${second}`] && (
-                    <div style={{ marginTop: 10, fontSize: 20, fontWeight: 800, color: "#e6c866", fontFamily: "'JetBrains Mono', monospace" }}>現在オッズ ×{exactaOdds[`${first}→${second}`].odds}</div>
-                  )}
+                  {exactaOdds[`${first}→${second}`] && <div style={{ marginTop: 10, fontSize: 20, fontWeight: 800, color: "#e6c866", fontFamily: "'JetBrains Mono', monospace" }}>現在オッズ ×{exactaOdds[`${first}→${second}`].odds}</div>}
                 </div>
                 <BetForm label={`🎯 2連単「${first} → ${second}」にベット`} onSubmit={handleExactaBet} disabled={!first || !second} />
               </div>
             )}
-
-            {countdown.expired && (
-              <div style={{ fontSize: 13, fontWeight: 700, color: "#8892b0", marginBottom: 12 }}>🔒 投票は締め切りました — オッズと結果を確認できます</div>
-            )}
-
+            {countdown.expired && <div style={{ fontSize: 13, fontWeight: 700, color: "#8892b0", marginBottom: 12 }}>🔒 投票は締め切りました — オッズと結果を確認できます</div>}
             {!countdown.expired && (
               <>
                 <div style={{ fontSize: 13, fontWeight: 700, color: first ? "#4caf50" : "#e6c866", marginBottom: 12, display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
@@ -463,11 +385,7 @@ export default function App() {
                   {first && <span style={{ padding: "2px 10px", borderRadius: 8, background: "rgba(230,200,102,0.15)", fontSize: 12, color: "#e6c866" }}>{TEAMS.find((t) => t.name === first)?.flag} {first}</span>}
                   {first && <button onClick={() => { setFirst(null); setSecond(null); }} style={{ marginLeft: "auto", fontSize: 11, color: "#ef5350", background: "none", border: "none", cursor: "pointer", padding: "4px 8px" }}>リセット</button>}
                 </div>
-                {!first && (
-                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                    {TEAMS.map((team) => (<TeamButton key={team.name} team={team} selected={first} onClick={(name) => setFirst(name)} />))}
-                  </div>
-                )}
+                {!first && <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>{TEAMS.map((team) => (<TeamButton key={team.name} team={team} selected={first} onClick={(name) => setFirst(name)} />))}</div>}
                 {first && (
                   <>
                     <div style={{ fontSize: 13, fontWeight: 700, color: second ? "#4caf50" : "#e6c866", marginBottom: 12, marginTop: 20, display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
@@ -475,16 +393,11 @@ export default function App() {
                       {second && <span style={{ padding: "2px 10px", borderRadius: 8, background: "rgba(144,164,174,0.15)", fontSize: 12, color: "#90a4ae" }}>{TEAMS.find((t) => t.name === second)?.flag} {second}</span>}
                       {second && <button onClick={() => setSecond(null)} style={{ marginLeft: "auto", fontSize: 11, color: "#ef5350", background: "none", border: "none", cursor: "pointer", padding: "4px 8px" }}>変更</button>}
                     </div>
-                    {!second && (
-                      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                        {TEAMS.filter((t) => t.name !== first).map((team) => (<TeamButton key={team.name} team={team} selected={second} onClick={(name) => setSecond(name)} />))}
-                      </div>
-                    )}
+                    {!second && <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>{TEAMS.filter((t) => t.name !== first).map((team) => (<TeamButton key={team.name} team={team} selected={second} onClick={(name) => setSecond(name)} />))}</div>}
                   </>
                 )}
               </>
             )}
-
             {exactaRanking.length > 0 && (
               <div style={{ marginTop: 20, marginBottom: 16, padding: "14px 12px", borderRadius: 14, background: "linear-gradient(135deg, #1a1f3a, #0d1225)", border: "1px solid rgba(255,255,255,0.06)" }}>
                 <div style={{ fontSize: 12, fontWeight: 700, color: "#e6c866", marginBottom: 4 }}>📊 2連単オッズ TOP</div>
