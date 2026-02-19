@@ -104,17 +104,18 @@ function TeamButton({ team, selected, onClick, odds }) {
       width: "100%", padding: "12px 14px", borderRadius: 12,
       background: isSelected ? "linear-gradient(135deg, #e6c86622, #d4a84322)" : "rgba(255,255,255,0.03)",
       border: isSelected ? "2px solid #e6c866" : "2px solid rgba(255,255,255,0.06)",
-      cursor: "pointer", transition: "all 0.2s", textAlign: "left", position: "relative",
+      cursor: "pointer", transition: "all 0.2s", textAlign: "left",
       boxShadow: isSelected ? "0 0 20px rgba(230,200,102,0.1)" : "none",
+      boxSizing: "border-box",
     }}>
-      <span style={{ fontSize: 28, lineHeight: 1 }}>{team.flag}</span>
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: 14, fontWeight: 700, color: isSelected ? "#e6c866" : "#e0e6ff", lineHeight: 1.2 }}>{team.name}</div>
+      <span style={{ fontSize: 26, lineHeight: 1, flexShrink: 0 }}>{team.flag}</span>
+      <div style={{ flex: 1, minWidth: 0, overflow: "hidden" }}>
+        <div style={{ fontSize: 14, fontWeight: 700, color: isSelected ? "#e6c866" : "#e0e6ff", lineHeight: 1.2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{team.name}</div>
         <div style={{ fontSize: 10, color: "#5a6490", marginTop: 2 }}>Pool {team.pool}</div>
       </div>
       {odds && odds.count > 0 && (
         <div style={{ textAlign: "right", flexShrink: 0 }}>
-          <div style={{ fontSize: 18, fontWeight: 800, color: "#e6c866", fontFamily: "'JetBrains Mono', monospace" }}>×{odds.odds}</div>
+          <div style={{ fontSize: 16, fontWeight: 800, color: "#e6c866", fontFamily: "'JetBrains Mono', monospace" }}>×{odds.odds}</div>
           <div style={{ fontSize: 10, color: "#5a6490" }}>{odds.count}票</div>
         </div>
       )}
@@ -143,24 +144,25 @@ function BetForm({ onSubmit, label, disabled }) {
       animation: "fadeIn 0.3s ease",
       boxShadow: "0 8px 32px rgba(0,0,0,0.6)",
     }}>
-      <div style={{ fontSize: 12, color: "#e6c866", fontWeight: 700, marginBottom: 10 }}>{label}</div>
+      <div style={{ fontSize: 12, color: "#e6c866", fontWeight: 700, marginBottom: 10, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{label}</div>
       <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
-        <input type="text" placeholder="名前（ニックネーム）" value={name}
+        <input type="text" placeholder="名前" value={name}
           onChange={(e) => setName(e.target.value)}
           style={{
-            flex: 1, padding: "11px 14px", borderRadius: 10,
+            flex: 1, padding: "11px 12px", borderRadius: 10,
             background: "rgba(0,0,0,0.6)", border: "1px solid rgba(255,255,255,0.15)",
             color: "#e0e6ff", fontSize: 14, outline: "none", minWidth: 0,
+            boxSizing: "border-box",
           }} />
-        <div style={{ position: "relative", flex: 1 }}>
+        <div style={{ position: "relative", width: "40%" }}>
           <span style={{
-            position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)",
+            position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)",
             color: "#8892b0", fontSize: 14, pointerEvents: "none",
           }}>¥</span>
           <input type="number" placeholder="金額" value={amount} min="100" step="100"
             onChange={(e) => setAmount(e.target.value)}
             style={{
-              width: "100%", boxSizing: "border-box", padding: "11px 14px 11px 28px", borderRadius: 10,
+              width: "100%", boxSizing: "border-box", padding: "11px 10px 11px 24px", borderRadius: 10,
               background: "rgba(0,0,0,0.6)", border: "1px solid rgba(255,255,255,0.15)",
               color: "#e0e6ff", fontSize: 14, outline: "none",
             }} />
@@ -191,6 +193,7 @@ function SuccessToast({ message }) {
       background: "rgba(76,175,80,0.95)", color: "#fff",
       fontSize: 14, fontWeight: 600, zIndex: 9999,
       boxShadow: "0 8px 32px rgba(0,0,0,0.4)", animation: "fadeIn 0.3s ease",
+      maxWidth: "90%", textAlign: "center",
     }}>✅ {message}</div>
   );
 }
@@ -201,21 +204,21 @@ function RankingBar({ items, colorA, colorB }) {
   return (
     <div style={{ marginTop: 12 }}>
       {sorted.slice(0, 8).map((item) => (
-        <div key={item.label} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
-          <div style={{ width: 90, fontSize: 11, color: "#8892b0", textAlign: "right", flexShrink: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+        <div key={item.label} style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
+          <div style={{ width: 80, fontSize: 10, color: "#8892b0", textAlign: "right", flexShrink: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
             {item.flag} {item.label}
           </div>
-          <div style={{ flex: 1, height: 20, borderRadius: 4, background: "rgba(255,255,255,0.04)", overflow: "hidden" }}>
+          <div style={{ flex: 1, height: 18, borderRadius: 4, background: "rgba(255,255,255,0.04)", overflow: "hidden" }}>
             <div style={{
               width: `${Math.max(item.pct, 2)}%`, height: "100%",
               background: `linear-gradient(90deg, ${colorA}, ${colorB})`,
               borderRadius: 4, transition: "width 0.6s ease",
-              display: "flex", alignItems: "center", justifyContent: "flex-end", paddingRight: 6,
+              display: "flex", alignItems: "center", justifyContent: "flex-end", paddingRight: 4,
             }}>
-              {item.pct >= 10 && <span style={{ fontSize: 10, fontWeight: 700, color: "#080c1a" }}>{item.pct}%</span>}
+              {item.pct >= 12 && <span style={{ fontSize: 9, fontWeight: 700, color: "#080c1a" }}>{item.pct}%</span>}
             </div>
           </div>
-          <div style={{ width: 50, fontSize: 11, color: "#e6c866", fontWeight: 700, fontFamily: "'JetBrains Mono', monospace", textAlign: "right", flexShrink: 0 }}>
+          <div style={{ width: 40, fontSize: 10, color: "#e6c866", fontWeight: 700, fontFamily: "'JetBrains Mono', monospace", textAlign: "right", flexShrink: 0 }}>
             ×{item.odds}
           </div>
         </div>
@@ -230,15 +233,15 @@ function HistoryModal({ bets, onClose }) {
       position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
       background: "rgba(0,0,0,0.85)", zIndex: 10000,
       display: "flex", justifyContent: "center", alignItems: "flex-start",
-      padding: "40px 16px", overflowY: "auto",
+      padding: "40px 12px", overflowY: "auto",
     }} onClick={onClose}>
       <div style={{
         width: "100%", maxWidth: 460, background: "linear-gradient(135deg, #1a1f3a, #0d1225)",
-        borderRadius: 16, padding: "20px 16px", border: "1px solid rgba(255,255,255,0.08)",
+        borderRadius: 16, padding: "20px 14px", border: "1px solid rgba(255,255,255,0.08)",
         animation: "fadeIn 0.3s ease",
       }} onClick={(e) => e.stopPropagation()}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-          <div style={{ fontSize: 16, fontWeight: 700, color: "#e6c866" }}>📋 全ベット履歴（{bets.length}件）</div>
+          <div style={{ fontSize: 15, fontWeight: 700, color: "#e6c866" }}>📋 全ベット履歴（{bets.length}件）</div>
           <button onClick={onClose} style={{
             background: "rgba(255,255,255,0.08)", border: "none", color: "#8892b0",
             fontSize: 18, width: 32, height: 32, borderRadius: 8, cursor: "pointer",
@@ -254,11 +257,11 @@ function HistoryModal({ bets, onClose }) {
             padding: "10px 0",
             borderBottom: i < bets.length - 1 ? "1px solid rgba(255,255,255,0.04)" : "none",
           }}>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 3 }}>
+            <div style={{ flex: 1, minWidth: 0, overflow: "hidden" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 3, flexWrap: "wrap" }}>
                 <span style={{ fontSize: 13, color: "#e0e6ff", fontWeight: 600 }}>{b.name}</span>
                 <span style={{ fontSize: 10, color: "#3a4270" }}>▸</span>
-                <span style={{ fontSize: 12, color: "#e0e6ff" }}>
+                <span style={{ fontSize: 12, color: "#e0e6ff", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                   {b.type === "winner" ? "🏆" : "🎯"} {b.pick}
                 </span>
               </div>
@@ -266,7 +269,7 @@ function HistoryModal({ bets, onClose }) {
                 {formatTime(b.time)}
               </div>
             </div>
-            <span style={{ fontSize: 14, fontWeight: 700, color: "#e6c866", fontFamily: "'JetBrains Mono', monospace", flexShrink: 0, marginLeft: 8 }}>
+            <span style={{ fontSize: 13, fontWeight: 700, color: "#e6c866", fontFamily: "'JetBrains Mono', monospace", flexShrink: 0, marginLeft: 8 }}>
               ¥{b.amount.toLocaleString()}
             </span>
           </div>
@@ -281,7 +284,7 @@ function RecentFeed({ recentBets, onShowAll }) {
   return (
     <div style={{
       margin: "0 0 20px", background: "linear-gradient(135deg, #1a1f3a, #0d1225)",
-      borderRadius: 14, padding: "14px 16px", border: "1px solid rgba(255,255,255,0.06)",
+      borderRadius: 14, padding: "14px 14px", border: "1px solid rgba(255,255,255,0.06)",
     }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
         <div style={{ fontSize: 13, fontWeight: 700, color: "#e6c866", display: "flex", alignItems: "center", gap: 6 }}>
@@ -291,7 +294,7 @@ function RecentFeed({ recentBets, onShowAll }) {
         <button onClick={onShowAll} style={{
           background: "rgba(230,200,102,0.1)", border: "1px solid rgba(230,200,102,0.25)",
           color: "#e6c866", fontSize: 11, fontWeight: 700, padding: "4px 10px",
-          borderRadius: 6, cursor: "pointer", transition: "all 0.2s",
+          borderRadius: 6, cursor: "pointer",
         }}>
           すべて見る →
         </button>
@@ -302,11 +305,11 @@ function RecentFeed({ recentBets, onShowAll }) {
           padding: "8px 0",
           borderBottom: i < Math.min(recentBets.length, 6) - 1 ? "1px solid rgba(255,255,255,0.04)" : "none",
         }}>
-          <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ flex: 1, minWidth: 0, overflow: "hidden" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-              <span style={{ fontSize: 12, color: "#8892b0" }}>{b.name}</span>
-              <span style={{ fontSize: 11, color: "#3a4270" }}>▸</span>
-              <span style={{ fontSize: 12, color: "#e0e6ff", fontWeight: 600 }}>
+              <span style={{ fontSize: 12, color: "#8892b0", flexShrink: 0 }}>{b.name}</span>
+              <span style={{ fontSize: 11, color: "#3a4270", flexShrink: 0 }}>▸</span>
+              <span style={{ fontSize: 12, color: "#e0e6ff", fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                 {b.type === "winner" ? "🏆" : "🎯"} {b.pick}
               </span>
             </div>
@@ -314,7 +317,7 @@ function RecentFeed({ recentBets, onShowAll }) {
               {formatTime(b.time)}
             </div>
           </div>
-          <span style={{ fontSize: 13, fontWeight: 700, color: "#e6c866", fontFamily: "'JetBrains Mono', monospace", flexShrink: 0 }}>
+          <span style={{ fontSize: 13, fontWeight: 700, color: "#e6c866", fontFamily: "'JetBrains Mono', monospace", flexShrink: 0, marginLeft: 8 }}>
             ¥{b.amount.toLocaleString()}
           </span>
         </div>
@@ -409,41 +412,44 @@ export default function App() {
       background: "linear-gradient(180deg, #080c1a 0%, #0a0f24 50%, #080c1a 100%)",
       fontFamily: "'Noto Sans JP', 'Helvetica Neue', sans-serif",
       color: "#e0e6ff", maxWidth: 480, margin: "0 auto",
+      overflowX: "hidden",
     }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;600;700;900&family=JetBrains+Mono:wght@400;700;800&display=swap');
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { background: #080c1a; }
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        html, body { background: #080c1a; overflow-x: hidden; width: 100%; }
         input::placeholder { color: #4a5280; }
-        input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; }
+        input[type=number]::-webkit-inner-spin-button,
+        input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+        input[type=number] { -moz-appearance: textfield; }
         ::-webkit-scrollbar { height: 0; width: 0; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
         @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
         @keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
       `}</style>
 
-      <div style={{ padding: "28px 20px 18px", textAlign: "center", position: "relative" }}>
+      <div style={{ padding: "28px 16px 18px", textAlign: "center", position: "relative" }}>
         <div style={{
           position: "absolute", top: 0, left: 0, right: 0, bottom: 0,
           background: "radial-gradient(ellipse at 50% 0%, rgba(230,200,102,0.08) 0%, transparent 70%)",
         }} />
-        <div style={{ fontSize: 11, letterSpacing: 6, color: "#e6c866", fontWeight: 700, marginBottom: 6, fontFamily: "'JetBrains Mono', monospace" }}>2026 WBC</div>
+        <div style={{ fontSize: 11, letterSpacing: 6, color: "#e6c866", fontWeight: 700, marginBottom: 6, fontFamily: "'JetBrains Mono', monospace", position: "relative" }}>2026 WBC</div>
         <h1 style={{
-          fontSize: 28, fontWeight: 900, color: "#fff", lineHeight: 1.3,
+          fontSize: 26, fontWeight: 900, color: "#fff", lineHeight: 1.3, position: "relative",
           background: "linear-gradient(135deg, #fff 0%, #e6c866 50%, #fff 100%)",
           backgroundSize: "200% auto", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent",
           animation: "shimmer 3s linear infinite",
         }}>⚾ 優勝予想</h1>
-        <div style={{ fontSize: 12, color: "#8892b0", marginTop: 6 }}>WBC 2026 — 優勝チームを予想してベット！</div>
+        <div style={{ fontSize: 12, color: "#8892b0", marginTop: 6, position: "relative" }}>WBC 2026 — 優勝チームを予想してベット！</div>
         <div style={{
-          display: "inline-block", marginTop: 10, padding: "4px 14px",
+          display: "inline-block", marginTop: 10, padding: "4px 14px", position: "relative",
           borderRadius: 20, background: "rgba(239,83,80,0.12)",
           border: "1px solid rgba(239,83,80,0.25)", fontSize: 10,
           color: "#ef5350", fontWeight: 700, letterSpacing: 1,
         }}>⚠ シミュレーション専用・実際の賭博ではありません</div>
       </div>
 
-      <div style={{ padding: "0 16px" }}>
+      <div style={{ padding: "0 12px" }}>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 16 }}>
           {[
             { label: "総ベット数", value: totalBets, icon: "🎫" },
@@ -451,11 +457,11 @@ export default function App() {
           ].map((s, i) => (
             <div key={i} style={{
               background: "linear-gradient(135deg, #1a1f3a, #0d1225)",
-              borderRadius: 14, padding: "14px", textAlign: "center",
+              borderRadius: 14, padding: "14px 10px", textAlign: "center",
               border: "1px solid rgba(255,255,255,0.06)",
             }}>
               <div style={{ fontSize: 20, marginBottom: 4 }}>{s.icon}</div>
-              <div style={{ fontSize: 20, fontWeight: 800, color: "#e6c866", fontFamily: "'JetBrains Mono', monospace" }}>{s.value}</div>
+              <div style={{ fontSize: 18, fontWeight: 800, color: "#e6c866", fontFamily: "'JetBrains Mono', monospace" }}>{s.value}</div>
               <div style={{ fontSize: 10, color: "#8892b0", marginTop: 2 }}>{s.label}</div>
             </div>
           ))}
@@ -470,13 +476,13 @@ export default function App() {
           ].map((tab) => (
             <button key={tab.key} onClick={() => { setMode(tab.key); setWinnerPick(null); setFirst(null); setSecond(null); }}
               style={{
-                flex: 1, padding: "14px 10px", borderRadius: 14, border: "none", cursor: "pointer",
+                flex: 1, padding: "14px 8px", borderRadius: 14, border: "none", cursor: "pointer",
                 background: mode === tab.key ? "linear-gradient(135deg, #e6c86618, #e6c86608)" : "rgba(255,255,255,0.03)",
                 borderWidth: 2, borderStyle: "solid",
                 borderColor: mode === tab.key ? "#e6c866" : "rgba(255,255,255,0.06)",
-                transition: "all 0.2s", textAlign: "center",
+                transition: "all 0.2s", textAlign: "center", boxSizing: "border-box",
               }}>
-              <div style={{ fontSize: 16, fontWeight: 800, color: mode === tab.key ? "#e6c866" : "#5a6490" }}>{tab.label}</div>
+              <div style={{ fontSize: 15, fontWeight: 800, color: mode === tab.key ? "#e6c866" : "#5a6490" }}>{tab.label}</div>
               <div style={{ fontSize: 10, color: mode === tab.key ? "#8892b0" : "#3a4270", marginTop: 2 }}>{tab.desc}</div>
             </button>
           ))}
@@ -486,7 +492,7 @@ export default function App() {
           <div style={{ animation: "fadeIn 0.3s ease" }}>
             <div style={{ fontSize: 13, fontWeight: 700, color: "#8892b0", marginBottom: 12 }}>🏆 優勝すると思うチームを選んでください</div>
             {winnerRanking.some((x) => x.pct > 0) && (
-              <div style={{ marginBottom: 16, padding: "14px 16px", borderRadius: 14, background: "linear-gradient(135deg, #1a1f3a, #0d1225)", border: "1px solid rgba(255,255,255,0.06)" }}>
+              <div style={{ marginBottom: 16, padding: "14px 12px", borderRadius: 14, background: "linear-gradient(135deg, #1a1f3a, #0d1225)", border: "1px solid rgba(255,255,255,0.06)" }}>
                 <div style={{ fontSize: 12, fontWeight: 700, color: "#e6c866", marginBottom: 4 }}>📊 オッズランキング</div>
                 <RankingBar items={winnerRanking} colorA="#e6c866" colorB="#d4a843" />
               </div>
@@ -497,7 +503,7 @@ export default function App() {
               ))}
             </div>
             {winnerPick && (
-              <div style={{ marginTop: 16, position: "sticky", bottom: 16, zIndex: 10, background: "#0a0f24", borderRadius: 16, padding: 4 }}>
+              <div style={{ marginTop: 16, position: "sticky", bottom: 12, zIndex: 10, background: "#0a0f24", borderRadius: 16, padding: 4 }}>
                 <BetForm label={`🏆 「${TEAMS.find((t) => t.name === winnerPick)?.flag} ${winnerPick}」の優勝にベット`} onSubmit={handleWinnerBet} disabled={!winnerPick} />
               </div>
             )}
@@ -531,30 +537,30 @@ export default function App() {
               </>
             )}
             {exactaRanking.length > 0 && (
-              <div style={{ marginTop: 20, marginBottom: 16, padding: "14px 16px", borderRadius: 14, background: "linear-gradient(135deg, #1a1f3a, #0d1225)", border: "1px solid rgba(255,255,255,0.06)" }}>
+              <div style={{ marginTop: 20, marginBottom: 16, padding: "14px 12px", borderRadius: 14, background: "linear-gradient(135deg, #1a1f3a, #0d1225)", border: "1px solid rgba(255,255,255,0.06)" }}>
                 <div style={{ fontSize: 12, fontWeight: 700, color: "#e6c866", marginBottom: 4 }}>📊 2連単オッズ TOP</div>
                 <RankingBar items={exactaRanking} colorA="#4fc3f7" colorB="#29b6f6" />
               </div>
             )}
             {first && second && (
-              <div style={{ marginTop: 16, position: "sticky", bottom: 16, zIndex: 10, background: "#0a0f24", borderRadius: 16, padding: 4 }}>
-                <div style={{ textAlign: "center", marginBottom: 14, padding: "16px", borderRadius: 14, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
+              <div style={{ marginTop: 16, position: "sticky", bottom: 12, zIndex: 10, background: "#0a0f24", borderRadius: 16, padding: 4 }}>
+                <div style={{ textAlign: "center", marginBottom: 14, padding: "14px", borderRadius: 14, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
                   <div style={{ fontSize: 11, color: "#8892b0", marginBottom: 8 }}>あなたの予想</div>
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 12 }}>
                     <div style={{ textAlign: "center" }}>
-                      <div style={{ fontSize: 32 }}>{TEAMS.find((t) => t.name === first)?.flag}</div>
-                      <div style={{ fontSize: 13, fontWeight: 700, color: "#e6c866", marginTop: 4 }}>{first}</div>
+                      <div style={{ fontSize: 30 }}>{TEAMS.find((t) => t.name === first)?.flag}</div>
+                      <div style={{ fontSize: 12, fontWeight: 700, color: "#e6c866", marginTop: 4 }}>{first}</div>
                       <div style={{ fontSize: 10, color: "#8892b0" }}>🥇 優勝</div>
                     </div>
                     <div style={{ fontSize: 18, color: "#3a4270", fontWeight: 800 }}>→</div>
                     <div style={{ textAlign: "center" }}>
-                      <div style={{ fontSize: 32 }}>{TEAMS.find((t) => t.name === second)?.flag}</div>
-                      <div style={{ fontSize: 13, fontWeight: 700, color: "#90a4ae", marginTop: 4 }}>{second}</div>
+                      <div style={{ fontSize: 30 }}>{TEAMS.find((t) => t.name === second)?.flag}</div>
+                      <div style={{ fontSize: 12, fontWeight: 700, color: "#90a4ae", marginTop: 4 }}>{second}</div>
                       <div style={{ fontSize: 10, color: "#8892b0" }}>🥈 準優勝</div>
                     </div>
                   </div>
                   {exactaOdds[`${first}→${second}`] && (
-                    <div style={{ marginTop: 10, fontSize: 22, fontWeight: 800, color: "#e6c866", fontFamily: "'JetBrains Mono', monospace" }}>
+                    <div style={{ marginTop: 10, fontSize: 20, fontWeight: 800, color: "#e6c866", fontFamily: "'JetBrains Mono', monospace" }}>
                       現在オッズ ×{exactaOdds[`${first}→${second}`].odds}
                     </div>
                   )}
@@ -566,7 +572,7 @@ export default function App() {
         )}
       </div>
 
-      <div style={{ padding: "30px 20px 40px", textAlign: "center", borderTop: "1px solid rgba(255,255,255,0.04)", marginTop: 30 }}>
+      <div style={{ padding: "30px 16px 40px", textAlign: "center", borderTop: "1px solid rgba(255,255,255,0.04)", marginTop: 30 }}>
         <div style={{ fontSize: 11, color: "#3a4270", lineHeight: 1.6 }}>
           WBC 2026 優勝予想シミュレーション<br />
           ファン同士で予想を楽しむためのサイトです<br />
