@@ -1,6 +1,9 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "./supabase";
 
+// 〆切: 2026年3月5日 12:00 JST（WBC最初の試合開始）
+const DEADLINE = new Date("2026-03-05T12:00:00+09:00");
+
 const TEAMS = [
   { name: "日本", flag: "🇯🇵", pool: "C" },
   { name: "アメリカ", flag: "🇺🇸", pool: "B" },
@@ -31,6 +34,66 @@ function formatTime(dateStr) {
   const h = d.getHours().toString().padStart(2, "0");
   const min = d.getMinutes().toString().padStart(2, "0");
   return `${m}/${day} ${h}:${min}`;
+}
+
+function useCountdown() {
+  const [now, setNow] = useState(new Date());
+  useEffect(() => {
+    const timer = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+  const diff = DEADLINE - now;
+  const expired = diff <= 0;
+  if (expired) return { expired: true, days: 0, hours: 0, minutes: 0, seconds: 0 };
+  const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+  const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
+  const minutes = Math.floor((diff / (1000 * 60)) % 60);
+  const seconds = Math.floor((diff / 1000) % 60);
+  return { expired: false, days, hours, minutes, seconds };
+}
+
+function CountdownBanner({ countdown }) {
+  if (countdown.expired) {
+    return (
+      <div style={{
+        margin: "0 0 16px", padding: "14px 12px", borderRadius: 14, textAlign: "center",
+        background: "linear-gradient(135deg, rgba(239,83,80,0.15), rgba(239,83,80,0.05))",
+        border: "1px solid rgba(239,83,80,0.3)",
+      }}>
+        <div style={{ fontSize: 14, fontWeight: 700, color: "#ef5350", marginBottom: 2 }}>🔒 投票は締め切りました</div>
+        <div style={{ fontSize: 11, color: "#8892b0" }}>WBC 2026 開幕！結果をお楽しみに</div>
+      </div>
+    );
+  }
+  const units = [
+    { value: countdown.days, label: "日" },
+    { value: countdown.hours, label: "時間" },
+    { value: countdown.minutes, label: "分" },
+    { value: countdown.seconds, label: "秒" },
+  ];
+  return (
+    <div style={{
+      margin: "0 0 16px", padding: "14px 12px", borderRadius: 14, textAlign: "center",
+      background: "linear-gradient(135deg, rgba(230,200,102,0.08), rgba(230,200,102,0.02))",
+      border: "1px solid rgba(230,200,102,0.15)",
+    }}>
+      <div style={{ fontSize: 11, color: "#8892b0", marginBottom: 8, fontWeight: 600 }}>⏰ 投票〆切まで（3/5 12:00 開幕戦キックオフ）</div>
+      <div style={{ display: "flex", justifyContent: "center", gap: 8 }}>
+        {units.map((u, i) => (
+          <div key={i} style={{ textAlign: "center", minWidth: 52 }}>
+            <div style={{
+              fontSize: 24, fontWeight: 800, color: "#e6c866",
+              fontFamily: "'JetBrains Mono', monospace", lineHeight: 1,
+              background: "rgba(0,0,0,0.3)", borderRadius: 8, padding: "8px 6px",
+            }}>
+              {String(u.value).padStart(2, "0")}
+            </div>
+            <div style={{ fontSize: 9, color: "#5a6490", marginTop: 4, fontWeight: 600 }}>{u.label}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 }
 
 function aggregateBets(bets) {
@@ -81,15 +144,16 @@ function calcExactaOdds(data) {
   return result;
 }
 
-function TeamButton({ team, selected, onClick, odds }) {
+function TeamButton({ team, selected, onClick, odds, disabled }) {
   const isSelected = selected === team.name;
   return (
-    <button onClick={() => onClick(team.name)} style={{
+    <button onClick={() => !disabled && onClick(team.name)} style={{
       display: "flex", alignItems: "center", gap: 10, width: "100%", padding: "12px 14px", borderRadius: 12,
       background: isSelected ? "linear-gradient(135deg, #e6c86622, #d4a84322)" : "rgba(255,255,255,0.03)",
       border: isSelected ? "2px solid #e6c866" : "2px solid rgba(255,255,255,0.06)",
-      cursor: "pointer", transition: "all 0.2s", textAlign: "left",
+      cursor: disabled ? "default" : "pointer", transition: "all 0.2s", textAlign: "left",
       boxShadow: isSelected ? "0 0 20px rgba(230,200,102,0.1)" : "none", boxSizing: "border-box",
+      opacity: disabled ? 0.6 : 1,
     }}>
       <span style={{ fontSize: 26, lineHeight: 1, flexShrink: 0 }}>{team.flag}</span>
       <div style={{ flex: 1, minWidth: 0, overflow: "hidden" }}>
@@ -205,7 +269,7 @@ function HistoryModal({ bets, onClose }) {
 function RecentFeed({ recentBets, onShowAll }) {
   if (!recentBets || recentBets.length === 0) return null;
   return (
-    <div style={{ margin: "0 0 20px", background: "linear-gradient(135deg, #1a1f3a, #0d1225)", borderRadius: 14, padding: "14px 14px", border: "1px solid rgba(255,255,255,0.06)" }}>
+    <div style={{ margin: "0 0 16px", background: "linear-gradient(135deg, #1a1f3a, #0d1225)", borderRadius: 14, padding: "14px 14px", border: "1px solid rgba(255,255,255,0.06)" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
         <div style={{ fontSize: 13, fontWeight: 700, color: "#e6c866", display: "flex", alignItems: "center", gap: 6 }}>
           <span style={{ display: "inline-block", width: 8, height: 8, borderRadius: "50%", background: "#4caf50", animation: "pulse 2s infinite" }} />
@@ -241,6 +305,7 @@ export default function App() {
   const [toast, setToast] = useState("");
   const [loading, setLoading] = useState(true);
   const [showHistory, setShowHistory] = useState(false);
+  const countdown = useCountdown();
 
   const loadData = useCallback(async () => {
     const { data, error } = await supabase.from("bets").select("*");
@@ -263,13 +328,13 @@ export default function App() {
   const showToast = (msg) => { setToast(msg); setTimeout(() => setToast(""), 2500); };
 
   const handleWinnerBet = async (name, amount) => {
-    if (!winnerPick) return;
+    if (!winnerPick || countdown.expired) return;
     const { error } = await supabase.from("bets").insert({ match_id: "winner", team_side: winnerPick, user_name: name, amount });
     if (!error) { setWinnerPick(null); showToast("優勝予想ベット完了！"); loadData(); }
   };
 
   const handleExactaBet = async (name, amount) => {
-    if (!first || !second) return;
+    if (!first || !second || countdown.expired) return;
     const { error } = await supabase.from("bets").insert({ match_id: "exacta", team_side: `${first}→${second}`, user_name: name, amount });
     if (!error) { setFirst(null); setSecond(null); showToast("2連単ベット完了！"); loadData(); }
   };
@@ -311,6 +376,9 @@ export default function App() {
       </div>
 
       <div style={{ padding: "0 12px" }}>
+        {/* カウントダウン */}
+        <CountdownBanner countdown={countdown} />
+
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 16 }}>
           {[{ label: "総ベット数", value: totalBets, icon: "🎫" }, { label: "総ベット額", value: `¥${totalAmount.toLocaleString()}`, icon: "💰" }].map((s, i) => (
             <div key={i} style={{ background: "linear-gradient(135deg, #1a1f3a, #0d1225)", borderRadius: 14, padding: "14px 10px", textAlign: "center", border: "1px solid rgba(255,255,255,0.06)" }}>
@@ -336,15 +404,12 @@ export default function App() {
         {/* ===== 優勝予想モード ===== */}
         {mode === "winner" && (
           <div style={{ animation: "fadeIn 0.3s ease" }}>
-            {/* フォーム（チーム選択後に上部に表示） */}
-            {winnerPick && (
+            {winnerPick && !countdown.expired && (
               <BetForm label={`🏆 「${TEAMS.find((t) => t.name === winnerPick)?.flag} ${winnerPick}」の優勝にベット`} onSubmit={handleWinnerBet} disabled={!winnerPick} />
             )}
-
             <div style={{ fontSize: 13, fontWeight: 700, color: "#8892b0", marginBottom: 12 }}>
-              {winnerPick ? "💡 他のチームに変更もできます" : "🏆 優勝すると思うチームを選んでください"}
+              {countdown.expired ? "🔒 投票は締め切りました — オッズと結果を確認できます" : winnerPick ? "💡 他のチームに変更もできます" : "🏆 優勝すると思うチームを選んでください"}
             </div>
-
             {winnerRanking.some((x) => x.pct > 0) && (
               <div style={{ marginBottom: 16, padding: "14px 12px", borderRadius: 14, background: "linear-gradient(135deg, #1a1f3a, #0d1225)", border: "1px solid rgba(255,255,255,0.06)" }}>
                 <div style={{ fontSize: 12, fontWeight: 700, color: "#e6c866", marginBottom: 4 }}>📊 オッズランキング</div>
@@ -353,7 +418,7 @@ export default function App() {
             )}
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               {TEAMS.map((team) => (
-                <TeamButton key={team.name} team={team} selected={winnerPick} onClick={setWinnerPick} odds={winnerOdds[team.name]} />
+                <TeamButton key={team.name} team={team} selected={winnerPick} onClick={setWinnerPick} odds={winnerOdds[team.name]} disabled={countdown.expired} />
               ))}
             </div>
           </div>
@@ -362,8 +427,7 @@ export default function App() {
         {/* ===== 2連単モード ===== */}
         {mode === "exacta" && (
           <div style={{ animation: "fadeIn 0.3s ease" }}>
-            {/* フォーム（1位・2位の両方選択後に上部に表示） */}
-            {first && second && (
+            {first && second && !countdown.expired && (
               <div style={{ marginBottom: 16 }}>
                 <div style={{ textAlign: "center", marginBottom: 14, padding: "14px", borderRadius: 14, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
                   <div style={{ fontSize: 11, color: "#8892b0", marginBottom: 8 }}>あなたの予想</div>
@@ -388,30 +452,35 @@ export default function App() {
               </div>
             )}
 
-            {/* 1位選択 */}
-            <div style={{ fontSize: 13, fontWeight: 700, color: first ? "#4caf50" : "#e6c866", marginBottom: 12, display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
-              {first ? "✅" : "①"} 優勝（1位）チームを選択
-              {first && <span style={{ padding: "2px 10px", borderRadius: 8, background: "rgba(230,200,102,0.15)", fontSize: 12, color: "#e6c866" }}>{TEAMS.find((t) => t.name === first)?.flag} {first}</span>}
-              {first && <button onClick={() => { setFirst(null); setSecond(null); }} style={{ marginLeft: "auto", fontSize: 11, color: "#ef5350", background: "none", border: "none", cursor: "pointer", padding: "4px 8px" }}>リセット</button>}
-            </div>
-            {!first && (
-              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                {TEAMS.map((team) => (<TeamButton key={team.name} team={team} selected={first} onClick={(name) => setFirst(name)} />))}
-              </div>
+            {countdown.expired && (
+              <div style={{ fontSize: 13, fontWeight: 700, color: "#8892b0", marginBottom: 12 }}>🔒 投票は締め切りました — オッズと結果を確認できます</div>
             )}
 
-            {/* 2位選択 */}
-            {first && (
+            {!countdown.expired && (
               <>
-                <div style={{ fontSize: 13, fontWeight: 700, color: second ? "#4caf50" : "#e6c866", marginBottom: 12, marginTop: 20, display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
-                  {second ? "✅" : "②"} 準優勝（2位）チームを選択
-                  {second && <span style={{ padding: "2px 10px", borderRadius: 8, background: "rgba(144,164,174,0.15)", fontSize: 12, color: "#90a4ae" }}>{TEAMS.find((t) => t.name === second)?.flag} {second}</span>}
-                  {second && <button onClick={() => setSecond(null)} style={{ marginLeft: "auto", fontSize: 11, color: "#ef5350", background: "none", border: "none", cursor: "pointer", padding: "4px 8px" }}>変更</button>}
+                <div style={{ fontSize: 13, fontWeight: 700, color: first ? "#4caf50" : "#e6c866", marginBottom: 12, display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                  {first ? "✅" : "①"} 優勝（1位）チームを選択
+                  {first && <span style={{ padding: "2px 10px", borderRadius: 8, background: "rgba(230,200,102,0.15)", fontSize: 12, color: "#e6c866" }}>{TEAMS.find((t) => t.name === first)?.flag} {first}</span>}
+                  {first && <button onClick={() => { setFirst(null); setSecond(null); }} style={{ marginLeft: "auto", fontSize: 11, color: "#ef5350", background: "none", border: "none", cursor: "pointer", padding: "4px 8px" }}>リセット</button>}
                 </div>
-                {!second && (
+                {!first && (
                   <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                    {TEAMS.filter((t) => t.name !== first).map((team) => (<TeamButton key={team.name} team={team} selected={second} onClick={(name) => setSecond(name)} />))}
+                    {TEAMS.map((team) => (<TeamButton key={team.name} team={team} selected={first} onClick={(name) => setFirst(name)} />))}
                   </div>
+                )}
+                {first && (
+                  <>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: second ? "#4caf50" : "#e6c866", marginBottom: 12, marginTop: 20, display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                      {second ? "✅" : "②"} 準優勝（2位）チームを選択
+                      {second && <span style={{ padding: "2px 10px", borderRadius: 8, background: "rgba(144,164,174,0.15)", fontSize: 12, color: "#90a4ae" }}>{TEAMS.find((t) => t.name === second)?.flag} {second}</span>}
+                      {second && <button onClick={() => setSecond(null)} style={{ marginLeft: "auto", fontSize: 11, color: "#ef5350", background: "none", border: "none", cursor: "pointer", padding: "4px 8px" }}>変更</button>}
+                    </div>
+                    {!second && (
+                      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                        {TEAMS.filter((t) => t.name !== first).map((team) => (<TeamButton key={team.name} team={team} selected={second} onClick={(name) => setSecond(name)} />))}
+                      </div>
+                    )}
+                  </>
                 )}
               </>
             )}
