@@ -24,6 +24,15 @@ const TEAMS = [
   { name: "ニカラグア", flag: "🇳🇮", pool: "D" },
 ];
 
+function formatTime(dateStr) {
+  const d = new Date(dateStr);
+  const m = (d.getMonth() + 1).toString().padStart(2, "0");
+  const day = d.getDate().toString().padStart(2, "0");
+  const h = d.getHours().toString().padStart(2, "0");
+  const min = d.getMinutes().toString().padStart(2, "0");
+  return `${m}/${day} ${h}:${min}`;
+}
+
 function aggregateBets(bets) {
   const winnerData = {};
   const exactaData = {};
@@ -42,13 +51,14 @@ function aggregateBets(bets) {
   });
 
   const sorted = [...bets].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-  sorted.slice(0, 20).forEach((b) => {
+  sorted.forEach((b) => {
     const team = TEAMS.find((t) => t.name === (b.match_id === "winner" ? b.team_side : b.team_side.split("→")[0]));
     recent.push({
       name: b.user_name,
       type: b.match_id,
       pick: b.match_id === "winner" ? `${team?.flag || ""} ${b.team_side}` : `${b.team_side.replace("→", " → ")}`,
       amount: b.amount,
+      time: b.created_at,
     });
   });
 
@@ -129,8 +139,9 @@ function BetForm({ onSubmit, label, disabled }) {
   return (
     <div style={{
       padding: 16, borderRadius: 14,
-      background: "rgba(230,200,102,0.04)", border: "1px solid rgba(230,200,102,0.12)",
+      background: "linear-gradient(135deg, #1a1f3a, #141830)", border: "1px solid rgba(230,200,102,0.25)",
       animation: "fadeIn 0.3s ease",
+      boxShadow: "0 8px 32px rgba(0,0,0,0.6)",
     }}>
       <div style={{ fontSize: 12, color: "#e6c866", fontWeight: 700, marginBottom: 10 }}>{label}</div>
       <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
@@ -138,7 +149,7 @@ function BetForm({ onSubmit, label, disabled }) {
           onChange={(e) => setName(e.target.value)}
           style={{
             flex: 1, padding: "11px 14px", borderRadius: 10,
-            background: "rgba(0,0,0,0.4)", border: "1px solid rgba(255,255,255,0.1)",
+            background: "rgba(0,0,0,0.6)", border: "1px solid rgba(255,255,255,0.15)",
             color: "#e0e6ff", fontSize: 14, outline: "none", minWidth: 0,
           }} />
         <div style={{ position: "relative", flex: 1 }}>
@@ -150,7 +161,7 @@ function BetForm({ onSubmit, label, disabled }) {
             onChange={(e) => setAmount(e.target.value)}
             style={{
               width: "100%", boxSizing: "border-box", padding: "11px 14px 11px 28px", borderRadius: 10,
-              background: "rgba(0,0,0,0.4)", border: "1px solid rgba(255,255,255,0.1)",
+              background: "rgba(0,0,0,0.6)", border: "1px solid rgba(255,255,255,0.15)",
               color: "#e0e6ff", fontSize: 14, outline: "none",
             }} />
         </div>
@@ -213,16 +224,77 @@ function RankingBar({ items, colorA, colorB }) {
   );
 }
 
-function RecentFeed({ recentBets }) {
+function HistoryModal({ bets, onClose }) {
+  return (
+    <div style={{
+      position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
+      background: "rgba(0,0,0,0.85)", zIndex: 10000,
+      display: "flex", justifyContent: "center", alignItems: "flex-start",
+      padding: "40px 16px", overflowY: "auto",
+    }} onClick={onClose}>
+      <div style={{
+        width: "100%", maxWidth: 460, background: "linear-gradient(135deg, #1a1f3a, #0d1225)",
+        borderRadius: 16, padding: "20px 16px", border: "1px solid rgba(255,255,255,0.08)",
+        animation: "fadeIn 0.3s ease",
+      }} onClick={(e) => e.stopPropagation()}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+          <div style={{ fontSize: 16, fontWeight: 700, color: "#e6c866" }}>📋 全ベット履歴（{bets.length}件）</div>
+          <button onClick={onClose} style={{
+            background: "rgba(255,255,255,0.08)", border: "none", color: "#8892b0",
+            fontSize: 18, width: 32, height: 32, borderRadius: 8, cursor: "pointer",
+            display: "flex", alignItems: "center", justifyContent: "center",
+          }}>✕</button>
+        </div>
+        {bets.length === 0 && (
+          <div style={{ textAlign: "center", color: "#5a6490", padding: "30px 0", fontSize: 14 }}>まだベットがありません</div>
+        )}
+        {bets.map((b, i) => (
+          <div key={i} style={{
+            display: "flex", alignItems: "center", justifyContent: "space-between",
+            padding: "10px 0",
+            borderBottom: i < bets.length - 1 ? "1px solid rgba(255,255,255,0.04)" : "none",
+          }}>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 3 }}>
+                <span style={{ fontSize: 13, color: "#e0e6ff", fontWeight: 600 }}>{b.name}</span>
+                <span style={{ fontSize: 10, color: "#3a4270" }}>▸</span>
+                <span style={{ fontSize: 12, color: "#e0e6ff" }}>
+                  {b.type === "winner" ? "🏆" : "🎯"} {b.pick}
+                </span>
+              </div>
+              <div style={{ fontSize: 10, color: "#5a6490", fontFamily: "'JetBrains Mono', monospace" }}>
+                {formatTime(b.time)}
+              </div>
+            </div>
+            <span style={{ fontSize: 14, fontWeight: 700, color: "#e6c866", fontFamily: "'JetBrains Mono', monospace", flexShrink: 0, marginLeft: 8 }}>
+              ¥{b.amount.toLocaleString()}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function RecentFeed({ recentBets, onShowAll }) {
   if (!recentBets || recentBets.length === 0) return null;
   return (
     <div style={{
       margin: "0 0 20px", background: "linear-gradient(135deg, #1a1f3a, #0d1225)",
       borderRadius: 14, padding: "14px 16px", border: "1px solid rgba(255,255,255,0.06)",
     }}>
-      <div style={{ fontSize: 13, fontWeight: 700, color: "#e6c866", marginBottom: 10, display: "flex", alignItems: "center", gap: 6 }}>
-        <span style={{ display: "inline-block", width: 8, height: 8, borderRadius: "50%", background: "#4caf50", animation: "pulse 2s infinite" }} />
-        最新ベット
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+        <div style={{ fontSize: 13, fontWeight: 700, color: "#e6c866", display: "flex", alignItems: "center", gap: 6 }}>
+          <span style={{ display: "inline-block", width: 8, height: 8, borderRadius: "50%", background: "#4caf50", animation: "pulse 2s infinite" }} />
+          最新ベット
+        </div>
+        <button onClick={onShowAll} style={{
+          background: "rgba(230,200,102,0.1)", border: "1px solid rgba(230,200,102,0.25)",
+          color: "#e6c866", fontSize: 11, fontWeight: 700, padding: "4px 10px",
+          borderRadius: 6, cursor: "pointer", transition: "all 0.2s",
+        }}>
+          すべて見る →
+        </button>
       </div>
       {recentBets.slice(0, 6).map((b, i) => (
         <div key={i} style={{
@@ -231,11 +303,16 @@ function RecentFeed({ recentBets }) {
           borderBottom: i < Math.min(recentBets.length, 6) - 1 ? "1px solid rgba(255,255,255,0.04)" : "none",
         }}>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <span style={{ fontSize: 12, color: "#8892b0" }}>{b.name}</span>
-            <span style={{ fontSize: 11, color: "#3a4270", margin: "0 6px" }}>▸</span>
-            <span style={{ fontSize: 12, color: "#e0e6ff", fontWeight: 600 }}>
-              {b.type === "winner" ? "🏆" : "🎯"} {b.pick}
-            </span>
+            <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+              <span style={{ fontSize: 12, color: "#8892b0" }}>{b.name}</span>
+              <span style={{ fontSize: 11, color: "#3a4270" }}>▸</span>
+              <span style={{ fontSize: 12, color: "#e0e6ff", fontWeight: 600 }}>
+                {b.type === "winner" ? "🏆" : "🎯"} {b.pick}
+              </span>
+            </div>
+            <div style={{ fontSize: 9, color: "#5a6490", marginTop: 2, fontFamily: "'JetBrains Mono', monospace" }}>
+              {formatTime(b.time)}
+            </div>
           </div>
           <span style={{ fontSize: 13, fontWeight: 700, color: "#e6c866", fontFamily: "'JetBrains Mono', monospace", flexShrink: 0 }}>
             ¥{b.amount.toLocaleString()}
@@ -256,6 +333,7 @@ export default function App() {
   const [recentBets, setRecentBets] = useState([]);
   const [toast, setToast] = useState("");
   const [loading, setLoading] = useState(true);
+  const [showHistory, setShowHistory] = useState(false);
 
   const loadData = useCallback(async () => {
     const { data, error } = await supabase.from("bets").select("*");
@@ -383,7 +461,7 @@ export default function App() {
           ))}
         </div>
 
-        <RecentFeed recentBets={recentBets} />
+        <RecentFeed recentBets={recentBets} onShowAll={() => setShowHistory(true)} />
 
         <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
           {[
@@ -419,7 +497,7 @@ export default function App() {
               ))}
             </div>
             {winnerPick && (
-              <div style={{ marginTop: 16, position: "sticky", bottom: 16, zIndex: 10 }}>
+              <div style={{ marginTop: 16, position: "sticky", bottom: 16, zIndex: 10, background: "#0a0f24", borderRadius: 16, padding: 4 }}>
                 <BetForm label={`🏆 「${TEAMS.find((t) => t.name === winnerPick)?.flag} ${winnerPick}」の優勝にベット`} onSubmit={handleWinnerBet} disabled={!winnerPick} />
               </div>
             )}
@@ -459,7 +537,7 @@ export default function App() {
               </div>
             )}
             {first && second && (
-              <div style={{ marginTop: 16, position: "sticky", bottom: 16, zIndex: 10 }}>
+              <div style={{ marginTop: 16, position: "sticky", bottom: 16, zIndex: 10, background: "#0a0f24", borderRadius: 16, padding: 4 }}>
                 <div style={{ textAlign: "center", marginBottom: 14, padding: "16px", borderRadius: 14, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
                   <div style={{ fontSize: 11, color: "#8892b0", marginBottom: 8 }}>あなたの予想</div>
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 12 }}>
@@ -497,6 +575,7 @@ export default function App() {
       </div>
 
       <SuccessToast message={toast} />
+      {showHistory && <HistoryModal bets={recentBets} onClose={() => setShowHistory(false)} />}
     </div>
   );
 }
