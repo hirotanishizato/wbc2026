@@ -101,7 +101,6 @@ function calcPersonalStats(bets, winnerData) {
     const u = users[b.user_name];
     u.totalBet += b.amount;
 
-    // チーム別に統合
     const team = TEAMS.find((t) => t.name === b.team_side);
     const pickLabel = `${team?.flag || ""} ${b.team_side}`;
     if (!u.teamMap[b.team_side]) {
@@ -112,7 +111,6 @@ function calcPersonalStats(bets, winnerData) {
     u.teamMap[b.team_side].times.push(b.created_at);
   });
 
-  // 各チームのオッズ・払戻を計算
   Object.values(users).forEach((u) => {
     let bestPayout = 0;
     u.teams = Object.values(u.teamMap).map((t) => {
@@ -126,7 +124,6 @@ function calcPersonalStats(bets, winnerData) {
       t.times.sort((a, b) => new Date(b) - new Date(a));
       return { ...t, odds: oddsStr, oddsVal, payout };
     });
-    // 投資額が多い順にソート
     u.teams.sort((a, b) => b.amount - a.amount);
     u.bestPayout = bestPayout;
     u.bestProfit = bestPayout - u.totalBet;
@@ -169,8 +166,8 @@ function PersonalStatsModal({ bets, winnerData, onClose }) {
                   <span style={{ fontSize: 11, color: "#5a6490", background: "rgba(255,255,255,0.06)", padding: "2px 8px", borderRadius: 6 }}>{user.teams.length}チーム{user.betCount > user.teams.length ? ` (${user.betCount}回)` : ""}</span>
                 </div>
                 <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
-                  <span style={{ fontSize: 10, color: "#8892b0" }}>投資 <span style={{ fontSize: 13, fontWeight: 800, color: "#ef5350", fontFamily: "'JetBrains Mono', monospace" }}>¥{user.totalBet.toLocaleString()}</span></span>
-                  <span style={{ fontSize: 10, color: "#8892b0" }}>ベスト的中時 <span style={{ fontSize: 13, fontWeight: 800, color: user.bestProfit >= 0 ? "#4caf50" : "#ef5350", fontFamily: "'JetBrains Mono', monospace" }}>{user.bestProfit >= 0 ? "+" : ""}¥{user.bestProfit.toLocaleString()}</span></span>
+                  <span style={{ fontSize: 10, color: "#8892b0" }}>投資 <span style={{ fontSize: 13, fontWeight: 800, color: "#ef5350", fontFamily: "'JetBrains Mono', monospace" }}>🎱{user.totalBet.toLocaleString()}</span></span>
+                  <span style={{ fontSize: 10, color: "#8892b0" }}>ベスト的中時 <span style={{ fontSize: 13, fontWeight: 800, color: user.bestProfit >= 0 ? "#4caf50" : "#ef5350", fontFamily: "'JetBrains Mono', monospace" }}>{user.bestProfit >= 0 ? "+" : ""}🎱{Math.abs(user.bestProfit).toLocaleString()}</span></span>
                 </div>
               </div>
               <span style={{ fontSize: 16, color: "#5a6490", transition: "transform 0.2s", transform: expanded === ui ? "rotate(180deg)" : "rotate(0deg)" }}>▼</span>
@@ -181,16 +178,16 @@ function PersonalStatsModal({ bets, winnerData, onClose }) {
                 <div style={{ display: "flex", gap: 8, margin: "12px 0", flexWrap: "wrap" }}>
                   <div style={{ flex: 1, minWidth: 90, padding: "10px 8px", borderRadius: 8, background: "rgba(239,83,80,0.08)", border: "1px solid rgba(239,83,80,0.15)", textAlign: "center" }}>
                     <div style={{ fontSize: 9, color: "#8892b0", marginBottom: 4 }}>総投資額</div>
-                    <div style={{ fontSize: 15, fontWeight: 800, color: "#ef5350", fontFamily: "'JetBrains Mono', monospace" }}>¥{user.totalBet.toLocaleString()}</div>
+                    <div style={{ fontSize: 15, fontWeight: 800, color: "#ef5350", fontFamily: "'JetBrains Mono', monospace" }}>🎱{user.totalBet.toLocaleString()}</div>
                   </div>
                   <div style={{ flex: 1, minWidth: 90, padding: "10px 8px", borderRadius: 8, background: "rgba(230,200,102,0.08)", border: "1px solid rgba(230,200,102,0.15)", textAlign: "center" }}>
                     <div style={{ fontSize: 9, color: "#8892b0", marginBottom: 4 }}>🏆 最高払戻</div>
-                    <div style={{ fontSize: 15, fontWeight: 800, color: "#e6c866", fontFamily: "'JetBrains Mono', monospace" }}>¥{user.bestPayout.toLocaleString()}</div>
+                    <div style={{ fontSize: 15, fontWeight: 800, color: "#e6c866", fontFamily: "'JetBrains Mono', monospace" }}>🎱{user.bestPayout.toLocaleString()}</div>
                   </div>
                   <div style={{ flex: 1, minWidth: 90, padding: "10px 8px", borderRadius: 8, background: user.bestProfit >= 0 ? "rgba(76,175,80,0.08)" : "rgba(239,83,80,0.08)", border: `1px solid ${user.bestProfit >= 0 ? "rgba(76,175,80,0.15)" : "rgba(239,83,80,0.15)"}`, textAlign: "center" }}>
                     <div style={{ fontSize: 9, color: "#8892b0", marginBottom: 4 }}>ベスト損益</div>
                     <div style={{ fontSize: 15, fontWeight: 800, color: user.bestProfit >= 0 ? "#4caf50" : "#ef5350", fontFamily: "'JetBrains Mono', monospace" }}>
-                      {user.bestProfit >= 0 ? "+" : ""}¥{user.bestProfit.toLocaleString()}
+                      {user.bestProfit >= 0 ? "+" : "-"}🎱{Math.abs(user.bestProfit).toLocaleString()}
                     </div>
                   </div>
                 </div>
@@ -209,17 +206,17 @@ function PersonalStatsModal({ bets, winnerData, onClose }) {
                       </div>
                       <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                         <div style={{ flex: 1, minWidth: 80, padding: "8px", borderRadius: 6, background: "rgba(239,83,80,0.06)", textAlign: "center" }}>
-                          <div style={{ fontSize: 9, color: "#8892b0", marginBottom: 2 }}>賭け金{t.betCount > 1 ? "(合計)" : ""}</div>
-                          <div style={{ fontSize: 13, fontWeight: 800, color: "#ef5350", fontFamily: "'JetBrains Mono', monospace" }}>¥{t.amount.toLocaleString()}</div>
+                          <div style={{ fontSize: 9, color: "#8892b0", marginBottom: 2 }}>賭け{t.betCount > 1 ? "(合計)" : ""}</div>
+                          <div style={{ fontSize: 13, fontWeight: 800, color: "#ef5350", fontFamily: "'JetBrains Mono', monospace" }}>🎱{t.amount.toLocaleString()}</div>
                         </div>
                         <div style={{ flex: 1, minWidth: 80, padding: "8px", borderRadius: 6, background: "rgba(76,175,80,0.06)", textAlign: "center" }}>
                           <div style={{ fontSize: 9, color: "#8892b0", marginBottom: 2 }}>払戻額</div>
-                          <div style={{ fontSize: 13, fontWeight: 800, color: "#4caf50", fontFamily: "'JetBrains Mono', monospace" }}>¥{t.payout.toLocaleString()}</div>
+                          <div style={{ fontSize: 13, fontWeight: 800, color: "#4caf50", fontFamily: "'JetBrains Mono', monospace" }}>🎱{t.payout.toLocaleString()}</div>
                         </div>
                         <div style={{ flex: 1, minWidth: 80, padding: "8px", borderRadius: 6, background: netIfHit >= 0 ? "rgba(76,175,80,0.06)" : "rgba(239,83,80,0.06)", textAlign: "center" }}>
                           <div style={{ fontSize: 9, color: "#8892b0", marginBottom: 2 }}>的中時損益</div>
                           <div style={{ fontSize: 13, fontWeight: 800, color: netIfHit >= 0 ? "#4caf50" : "#ef5350", fontFamily: "'JetBrains Mono', monospace" }}>
-                            {netIfHit >= 0 ? "+" : ""}¥{netIfHit.toLocaleString()}
+                            {netIfHit >= 0 ? "+" : "-"}🎱{Math.abs(netIfHit).toLocaleString()}
                           </div>
                         </div>
                       </div>
@@ -288,9 +285,9 @@ function BetForm({ onSubmit, label, disabled }) {
         <input type="text" placeholder="名前" value={name} onChange={(e) => setName(e.target.value)}
           style={{ flex: 1, padding: "11px 12px", borderRadius: 10, background: "rgba(0,0,0,0.6)", border: "1px solid rgba(255,255,255,0.15)", color: "#e0e6ff", fontSize: 14, outline: "none", minWidth: 0, boxSizing: "border-box" }} />
         <div style={{ position: "relative", width: "40%" }}>
-          <span style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: "#8892b0", fontSize: 14, pointerEvents: "none" }}>¥</span>
-          <input type="number" placeholder="金額" value={amount} min="100" step="100" onChange={(e) => setAmount(e.target.value)}
-            style={{ width: "100%", boxSizing: "border-box", padding: "11px 10px 11px 24px", borderRadius: 10, background: "rgba(0,0,0,0.6)", border: "1px solid rgba(255,255,255,0.15)", color: "#e0e6ff", fontSize: 14, outline: "none" }} />
+          <span style={{ position: "absolute", left: 8, top: "50%", transform: "translateY(-50%)", fontSize: 16, pointerEvents: "none" }}>🎱</span>
+          <input type="number" placeholder="数量" value={amount} min="100" step="100" onChange={(e) => setAmount(e.target.value)}
+            style={{ width: "100%", boxSizing: "border-box", padding: "11px 10px 11px 30px", borderRadius: 10, background: "rgba(0,0,0,0.6)", border: "1px solid rgba(255,255,255,0.15)", color: "#e0e6ff", fontSize: 14, outline: "none" }} />
         </div>
       </div>
       <button onClick={handleSubmit} disabled={disabled || submitting || !name.trim() || !amount || parseInt(amount) <= 0}
@@ -349,7 +346,7 @@ function HistoryModal({ bets, onClose }) {
               </div>
               <div style={{ fontSize: 10, color: "#5a6490", fontFamily: "'JetBrains Mono', monospace" }}>{formatTime(b.time)}</div>
             </div>
-            <span style={{ fontSize: 13, fontWeight: 700, color: "#e6c866", fontFamily: "'JetBrains Mono', monospace", flexShrink: 0, marginLeft: 8 }}>¥{b.amount.toLocaleString()}</span>
+            <span style={{ fontSize: 13, fontWeight: 700, color: "#e6c866", fontFamily: "'JetBrains Mono', monospace", flexShrink: 0, marginLeft: 8 }}>🎱{b.amount.toLocaleString()}</span>
           </div>
         ))}
       </div>
@@ -371,7 +368,7 @@ function RecentFeed({ recentBets }) {
             </div>
             <div style={{ fontSize: 9, color: "#5a6490", marginTop: 2, fontFamily: "'JetBrains Mono', monospace" }}>{formatTime(b.time)}</div>
           </div>
-          <span style={{ fontSize: 13, fontWeight: 700, color: "#e6c866", fontFamily: "'JetBrains Mono', monospace", flexShrink: 0, marginLeft: 8 }}>¥{b.amount.toLocaleString()}</span>
+          <span style={{ fontSize: 13, fontWeight: 700, color: "#e6c866", fontFamily: "'JetBrains Mono', monospace", flexShrink: 0, marginLeft: 8 }}>🎱{b.amount.toLocaleString()}</span>
         </div>
       ))}
     </div>
@@ -456,13 +453,16 @@ export default function App() {
         <CountdownBanner countdown={countdown} />
 
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 16 }}>
-          {[{ label: "総ベット数", value: totalBets, icon: "🎫" }, { label: "総ベット額", value: `¥${totalAmount.toLocaleString()}`, icon: "💰" }].map((s, i) => (
-            <div key={i} style={{ background: "linear-gradient(135deg, #1a1f3a, #0d1225)", borderRadius: 14, padding: "14px 10px", textAlign: "center", border: "1px solid rgba(255,255,255,0.06)" }}>
-              <div style={{ fontSize: 20, marginBottom: 4 }}>{s.icon}</div>
-              <div style={{ fontSize: 18, fontWeight: 800, color: "#e6c866", fontFamily: "'JetBrains Mono', monospace" }}>{s.value}</div>
-              <div style={{ fontSize: 10, color: "#8892b0", marginTop: 2 }}>{s.label}</div>
-            </div>
-          ))}
+          <div style={{ background: "linear-gradient(135deg, #1a1f3a, #0d1225)", borderRadius: 14, padding: "14px 10px", textAlign: "center", border: "1px solid rgba(255,255,255,0.06)" }}>
+            <div style={{ fontSize: 20, marginBottom: 4 }}>🎫</div>
+            <div style={{ fontSize: 18, fontWeight: 800, color: "#e6c866", fontFamily: "'JetBrains Mono', monospace" }}>{totalBets}</div>
+            <div style={{ fontSize: 10, color: "#8892b0", marginTop: 2 }}>総ベット数</div>
+          </div>
+          <div style={{ background: "linear-gradient(135deg, #1a1f3a, #0d1225)", borderRadius: 14, padding: "14px 10px", textAlign: "center", border: "1px solid rgba(255,255,255,0.06)" }}>
+            <div style={{ fontSize: 20, marginBottom: 4 }}>🎱</div>
+            <div style={{ fontSize: 18, fontWeight: 800, color: "#e6c866", fontFamily: "'JetBrains Mono', monospace" }}>🎱{totalAmount.toLocaleString()}</div>
+            <div style={{ fontSize: 10, color: "#8892b0", marginTop: 2 }}>総ベット額</div>
+          </div>
         </div>
 
         {recentBets.length > 0 && (
