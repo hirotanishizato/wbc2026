@@ -27,12 +27,20 @@ const TEAMS = [
   { name: "ニカラグア", flag: "🇳🇮", pool: "D" },
 ];
 
-function getSavedNickname() { try { return localStorage.getItem(LS_KEY) || ""; } catch { return ""; } }
-function saveNickname(name) { try { localStorage.setItem(LS_KEY, name); } catch {} }
+function getSavedNickname() {
+  try { return localStorage.getItem(LS_KEY) || ""; } catch { return ""; }
+}
+function saveNickname(name) {
+  try { localStorage.setItem(LS_KEY, name); } catch {}
+}
 
 function formatTime(dateStr) {
   const d = new Date(dateStr);
-  return `${(d.getMonth()+1).toString().padStart(2,"0")}/${d.getDate().toString().padStart(2,"0")} ${d.getHours().toString().padStart(2,"0")}:${d.getMinutes().toString().padStart(2,"0")}`;
+  const m = (d.getMonth() + 1).toString().padStart(2, "0");
+  const day = d.getDate().toString().padStart(2, "0");
+  const h = d.getHours().toString().padStart(2, "0");
+  const min = d.getMinutes().toString().padStart(2, "0");
+  return `${m}/${day} ${h}:${min}`;
 }
 
 function useCountdown() {
@@ -93,140 +101,6 @@ function calcExactaOdds(data) {
   const result = {};
   Object.entries(data).forEach(([key, d]) => { result[key] = { count: d.count, total: d.total, odds: d.total > 0 && total > 0 ? (total / d.total).toFixed(1) : "-", pct: total > 0 ? Math.round((d.total / total) * 100) : 0 }; });
   return result;
-}
-
-function calcPersonalStats(bets, winnerData, exactaData) {
-  let winnerPool = 0, exactaPool = 0;
-  Object.values(winnerData).forEach((d) => { winnerPool += d.total; });
-  Object.values(exactaData).forEach((d) => { exactaPool += d.total; });
-
-  const users = {};
-  bets.forEach((b) => {
-    if (!users[b.user_name]) users[b.user_name] = { name: b.user_name, totalBet: 0, bets: [], maxPayout: 0 };
-    const u = users[b.user_name];
-    u.totalBet += b.amount;
-
-    let payout = 0;
-    let oddsStr = "-";
-    if (b.match_id === "winner" && winnerData[b.team_side] && winnerData[b.team_side].total > 0) {
-      const odds = winnerPool / winnerData[b.team_side].total;
-      payout = Math.round(b.amount * odds);
-      oddsStr = odds.toFixed(1);
-    } else if (b.match_id === "exacta" && exactaData[b.team_side] && exactaData[b.team_side].total > 0) {
-      const odds = exactaPool / exactaData[b.team_side].total;
-      payout = Math.round(b.amount * odds);
-      oddsStr = odds.toFixed(1);
-    }
-
-    const team = TEAMS.find((t) => t.name === (b.match_id === "winner" ? b.team_side : b.team_side.split("→")[0]));
-    u.bets.push({
-      type: b.match_id,
-      pick: b.match_id === "winner" ? `${team?.flag || ""} ${b.team_side}` : `${b.team_side.replace("→", " → ")}`,
-      amount: b.amount,
-      payout,
-      odds: oddsStr,
-      time: b.created_at,
-    });
-    u.maxPayout += payout;
-  });
-
-  return Object.values(users).sort((a, b) => b.totalBet - a.totalBet);
-}
-
-function PersonalStatsModal({ bets, winnerData, exactaData, onClose }) {
-  const stats = calcPersonalStats(bets, winnerData, exactaData);
-  const [expanded, setExpanded] = useState(null);
-
-  return (
-    <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(0,0,0,0.85)", zIndex: 10000, display: "flex", justifyContent: "center", alignItems: "flex-start", padding: "40px 12px", overflowY: "auto" }} onClick={onClose}>
-      <div style={{ width: "100%", maxWidth: 460, background: "linear-gradient(135deg, #1a1f3a, #0d1225)", borderRadius: 16, padding: "20px 14px", border: "1px solid rgba(255,255,255,0.08)", animation: "fadeIn 0.3s ease" }} onClick={(e) => e.stopPropagation()}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-          <div style={{ fontSize: 15, fontWeight: 700, color: "#e6c866" }}>👤 個人別ベット成績</div>
-          <button onClick={onClose} style={{ background: "rgba(255,255,255,0.08)", border: "none", color: "#8892b0", fontSize: 18, width: 32, height: 32, borderRadius: 8, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
-        </div>
-
-        {stats.length === 0 && <div style={{ textAlign: "center", color: "#5a6490", padding: "30px 0", fontSize: 14 }}>まだベットがありません</div>}
-
-        {stats.map((user, ui) => (
-          <div key={user.name} style={{ marginBottom: 12, borderRadius: 12, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)", overflow: "hidden" }}>
-            {/* ユーザーヘッダー */}
-            <button onClick={() => setExpanded(expanded === ui ? null : ui)} style={{
-              width: "100%", padding: "14px 14px", display: "flex", alignItems: "center", justifyContent: "space-between",
-              background: "none", border: "none", cursor: "pointer", textAlign: "left",
-            }}>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-                  <span style={{ fontSize: 15, fontWeight: 700, color: "#e0e6ff" }}>{user.name}</span>
-                  <span style={{ fontSize: 11, color: "#5a6490", background: "rgba(255,255,255,0.06)", padding: "2px 8px", borderRadius: 6 }}>{user.bets.length}件</span>
-                </div>
-                <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
-                  <div>
-                    <span style={{ fontSize: 10, color: "#8892b0" }}>総ベット </span>
-                    <span style={{ fontSize: 14, fontWeight: 800, color: "#ef5350", fontFamily: "'JetBrains Mono', monospace" }}>¥{user.totalBet.toLocaleString()}</span>
-                  </div>
-                  <div>
-                    <span style={{ fontSize: 10, color: "#8892b0" }}>最大リターン </span>
-                    <span style={{ fontSize: 14, fontWeight: 800, color: "#4caf50", fontFamily: "'JetBrains Mono', monospace" }}>¥{user.maxPayout.toLocaleString()}</span>
-                  </div>
-                </div>
-              </div>
-              <span style={{ fontSize: 16, color: "#5a6490", transition: "transform 0.2s", transform: expanded === ui ? "rotate(180deg)" : "rotate(0deg)" }}>▼</span>
-            </button>
-
-            {/* 展開時の詳細 */}
-            {expanded === ui && (
-              <div style={{ padding: "0 14px 14px", borderTop: "1px solid rgba(255,255,255,0.06)" }}>
-                {/* 損益サマリー */}
-                <div style={{ display: "flex", gap: 8, margin: "12px 0", flexWrap: "wrap" }}>
-                  <div style={{ flex: 1, minWidth: 100, padding: "10px", borderRadius: 8, background: "rgba(239,83,80,0.08)", border: "1px solid rgba(239,83,80,0.15)", textAlign: "center" }}>
-                    <div style={{ fontSize: 9, color: "#8892b0", marginBottom: 4 }}>投資額</div>
-                    <div style={{ fontSize: 16, fontWeight: 800, color: "#ef5350", fontFamily: "'JetBrains Mono', monospace" }}>¥{user.totalBet.toLocaleString()}</div>
-                  </div>
-                  <div style={{ flex: 1, minWidth: 100, padding: "10px", borderRadius: 8, background: "rgba(76,175,80,0.08)", border: "1px solid rgba(76,175,80,0.15)", textAlign: "center" }}>
-                    <div style={{ fontSize: 9, color: "#8892b0", marginBottom: 4 }}>全的中時リターン</div>
-                    <div style={{ fontSize: 16, fontWeight: 800, color: "#4caf50", fontFamily: "'JetBrains Mono', monospace" }}>¥{user.maxPayout.toLocaleString()}</div>
-                  </div>
-                  <div style={{ flex: 1, minWidth: 100, padding: "10px", borderRadius: 8, background: "rgba(230,200,102,0.08)", border: "1px solid rgba(230,200,102,0.15)", textAlign: "center" }}>
-                    <div style={{ fontSize: 9, color: "#8892b0", marginBottom: 4 }}>全的中時利益</div>
-                    <div style={{ fontSize: 16, fontWeight: 800, color: user.maxPayout - user.totalBet >= 0 ? "#e6c866" : "#ef5350", fontFamily: "'JetBrains Mono', monospace" }}>
-                      {user.maxPayout - user.totalBet >= 0 ? "+" : ""}¥{(user.maxPayout - user.totalBet).toLocaleString()}
-                    </div>
-                  </div>
-                </div>
-
-                {/* ベット一覧 */}
-                <div style={{ fontSize: 11, color: "#5a6490", marginBottom: 8, fontWeight: 600 }}>ベット明細</div>
-                {user.bets.map((bet, bi) => (
-                  <div key={bi} style={{ padding: "10px 0", borderBottom: bi < user.bets.length - 1 ? "1px solid rgba(255,255,255,0.04)" : "none" }}>
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
-                      <div style={{ flex: 1, minWidth: 0, overflow: "hidden" }}>
-                        <span style={{ fontSize: 12, color: "#e0e6ff", fontWeight: 600 }}>{bet.type === "winner" ? "🏆" : "🎯"} {bet.pick}</span>
-                      </div>
-                      <span style={{ fontSize: 12, color: "#e6c866", fontWeight: 700, fontFamily: "'JetBrains Mono', monospace", flexShrink: 0 }}>×{bet.odds}</span>
-                    </div>
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                      <span style={{ fontSize: 10, color: "#5a6490", fontFamily: "'JetBrains Mono', monospace" }}>{formatTime(bet.time)}</span>
-                      <div style={{ display: "flex", gap: 12, flexShrink: 0 }}>
-                        <span style={{ fontSize: 11, color: "#8892b0" }}>賭 <span style={{ color: "#ef5350", fontWeight: 700, fontFamily: "'JetBrains Mono', monospace" }}>¥{bet.amount.toLocaleString()}</span></span>
-                        <span style={{ fontSize: 11, color: "#8892b0" }}>→ <span style={{ color: "#4caf50", fontWeight: 700, fontFamily: "'JetBrains Mono', monospace" }}>¥{bet.payout.toLocaleString()}</span></span>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        ))}
-
-        <div style={{ marginTop: 12, padding: "10px", borderRadius: 8, background: "rgba(255,255,255,0.02)", textAlign: "center" }}>
-          <div style={{ fontSize: 10, color: "#3a4270", lineHeight: 1.6 }}>
-            💡 リターンは現在のオッズに基づく予想額です<br />
-            今後の投票でオッズが変動する可能性があります
-          </div>
-        </div>
-      </div>
-    </div>
-  );
 }
 
 function TeamButton({ team, selected, onClick, odds, disabled }) {
@@ -342,7 +216,7 @@ function HistoryModal({ bets, onClose }) {
   );
 }
 
-function RecentFeed({ recentBets, onShowAll, onShowStats }) {
+function RecentFeed({ recentBets, onShowAll }) {
   if (!recentBets || recentBets.length === 0) return null;
   return (
     <div style={{ margin: "0 0 16px", background: "linear-gradient(135deg, #1a1f3a, #0d1225)", borderRadius: 14, padding: "14px 14px", border: "1px solid rgba(255,255,255,0.06)" }}>
@@ -350,10 +224,7 @@ function RecentFeed({ recentBets, onShowAll, onShowStats }) {
         <div style={{ fontSize: 13, fontWeight: 700, color: "#e6c866", display: "flex", alignItems: "center", gap: 6 }}>
           <span style={{ display: "inline-block", width: 8, height: 8, borderRadius: "50%", background: "#4caf50", animation: "pulse 2s infinite" }} />最新ベット
         </div>
-        <div style={{ display: "flex", gap: 6 }}>
-          <button onClick={onShowStats} style={{ background: "rgba(76,175,80,0.1)", border: "1px solid rgba(76,175,80,0.25)", color: "#4caf50", fontSize: 11, fontWeight: 700, padding: "4px 10px", borderRadius: 6, cursor: "pointer" }}>👤 個人別</button>
-          <button onClick={onShowAll} style={{ background: "rgba(230,200,102,0.1)", border: "1px solid rgba(230,200,102,0.25)", color: "#e6c866", fontSize: 11, fontWeight: 700, padding: "4px 10px", borderRadius: 6, cursor: "pointer" }}>すべて見る →</button>
-        </div>
+        <button onClick={onShowAll} style={{ background: "rgba(230,200,102,0.1)", border: "1px solid rgba(230,200,102,0.25)", color: "#e6c866", fontSize: 11, fontWeight: 700, padding: "4px 10px", borderRadius: 6, cursor: "pointer" }}>すべて見る →</button>
       </div>
       {recentBets.slice(0, 6).map((b, i) => (
         <div key={i} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 0", borderBottom: i < Math.min(recentBets.length, 6) - 1 ? "1px solid rgba(255,255,255,0.04)" : "none" }}>
@@ -380,29 +251,14 @@ export default function App() {
   const [winnerData, setWinnerData] = useState({});
   const [exactaData, setExactaData] = useState({});
   const [recentBets, setRecentBets] = useState([]);
-  const [rawBets, setRawBets] = useState([]);
   const [toast, setToast] = useState("");
   const [loading, setLoading] = useState(true);
   const [showHistory, setShowHistory] = useState(false);
-  const [showStats, setShowStats] = useState(false);
   const countdown = useCountdown();
 
-  const loadData = useCallback(async (retry = 0) => {
-    try {
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 8000);
-      const { data, error } = await supabase.from("bets").select("*").abortSignal(controller.signal);
-      clearTimeout(timeout);
-      if (!error && data) {
-        setRawBets(data);
-        const agg = aggregateBets(data);
-        setWinnerData(agg.winnerData);
-        setExactaData(agg.exactaData);
-        setRecentBets(agg.recent);
-      }
-    } catch (e) {
-      if (retry < 2) { await new Promise(r => setTimeout(r, 1500)); return loadData(retry + 1); }
-    }
+  const loadData = useCallback(async () => {
+    const { data, error } = await supabase.from("bets").select("*");
+    if (!error && data) { const agg = aggregateBets(data); setWinnerData(agg.winnerData); setExactaData(agg.exactaData); setRecentBets(agg.recent); }
     setLoading(false);
   }, []);
 
@@ -473,7 +329,7 @@ export default function App() {
           ))}
         </div>
 
-        <RecentFeed recentBets={recentBets} onShowAll={() => setShowHistory(true)} onShowStats={() => setShowStats(true)} />
+        <RecentFeed recentBets={recentBets} onShowAll={() => setShowHistory(true)} />
 
         <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
           {[{ key: "winner", label: "🏆 優勝予想", desc: "1チーム選択" }, { key: "exacta", label: "🎯 2連単", desc: "1位と2位を予想" }].map((tab) => (
@@ -558,7 +414,6 @@ export default function App() {
 
       <SuccessToast message={toast} />
       {showHistory && <HistoryModal bets={recentBets} onClose={() => setShowHistory(false)} />}
-      {showStats && <PersonalStatsModal bets={rawBets} winnerData={winnerData} exactaData={exactaData} onClose={() => setShowStats(false)} />}
     </div>
   );
 }
