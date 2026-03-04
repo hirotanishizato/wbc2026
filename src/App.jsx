@@ -97,29 +97,41 @@ function calcPersonalStats(bets, winnerData) {
 
   const users = {};
   bets.filter(b => b.match_id === "winner").forEach((b) => {
-    if (!users[b.user_name]) users[b.user_name] = { name: b.user_name, totalBet: 0, bets: [] };
+    if (!users[b.user_name]) users[b.user_name] = { name: b.user_name, totalBet: 0, teamMap: {} };
     const u = users[b.user_name];
     u.totalBet += b.amount;
 
-    let payout = 0, oddsVal = 0, oddsStr = "-";
-    if (winnerData[b.team_side] && winnerData[b.team_side].total > 0) {
-      oddsVal = winnerPool / winnerData[b.team_side].total;
-      payout = Math.round(b.amount * oddsVal);
-      oddsStr = oddsVal.toFixed(1);
-    }
-
+    // チーム別に統合
     const team = TEAMS.find((t) => t.name === b.team_side);
-    u.bets.push({ pick: `${team?.flag || ""} ${b.team_side}`, amount: b.amount, payout, odds: oddsStr, oddsVal, time: b.created_at });
+    const pickLabel = `${team?.flag || ""} ${b.team_side}`;
+    if (!u.teamMap[b.team_side]) {
+      u.teamMap[b.team_side] = { pick: pickLabel, teamName: b.team_side, amount: 0, betCount: 0, times: [] };
+    }
+    u.teamMap[b.team_side].amount += b.amount;
+    u.teamMap[b.team_side].betCount += 1;
+    u.teamMap[b.team_side].times.push(b.created_at);
   });
 
+  // 各チームのオッズ・払戻を計算
   Object.values(users).forEach((u) => {
-    const byTeam = {};
-    u.bets.forEach((b) => {
-      if (!byTeam[b.pick]) byTeam[b.pick] = 0;
-      byTeam[b.pick] += b.payout;
+    let bestPayout = 0;
+    u.teams = Object.values(u.teamMap).map((t) => {
+      let oddsVal = 0, oddsStr = "-", payout = 0;
+      if (winnerData[t.teamName] && winnerData[t.teamName].total > 0) {
+        oddsVal = winnerPool / winnerData[t.teamName].total;
+        payout = Math.round(t.amount * oddsVal);
+        oddsStr = oddsVal.toFixed(1);
+      }
+      if (payout > bestPayout) bestPayout = payout;
+      t.times.sort((a, b) => new Date(b) - new Date(a));
+      return { ...t, odds: oddsStr, oddsVal, payout };
     });
-    u.bestPayout = Math.max(0, ...Object.values(byTeam));
-    u.bestProfit = u.bestPayout - u.totalBet;
+    // 投資額が多い順にソート
+    u.teams.sort((a, b) => b.amount - a.amount);
+    u.bestPayout = bestPayout;
+    u.bestProfit = bestPayout - u.totalBet;
+    u.betCount = u.teams.reduce((s, t) => s + t.betCount, 0);
+    delete u.teamMap;
   });
 
   return Object.values(users).sort((a, b) => b.totalBet - a.totalBet);
@@ -139,7 +151,7 @@ function PersonalStatsModal({ bets, winnerData, onClose }) {
 
         <div style={{ marginBottom: 14, padding: "10px 12px", borderRadius: 10, background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.04)" }}>
           <div style={{ fontSize: 10, color: "#5a6490", lineHeight: 1.6 }}>
-            💡 優勝できるチームは1つだけ。各ベットは「もしこれが当たったら」の払戻額です。ベスト的中は最も有利な1件が当たった場合の損益です。
+            💡 同じチームへの複数ベットは合算して表示。ベスト的中は最も有利なチームが優勝した場合の損益です。
           </div>
         </div>
 
@@ -154,7 +166,7 @@ function PersonalStatsModal({ bets, winnerData, onClose }) {
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
                   <span style={{ fontSize: 15, fontWeight: 700, color: "#e0e6ff" }}>{user.name}</span>
-                  <span style={{ fontSize: 11, color: "#5a6490", background: "rgba(255,255,255,0.06)", padding: "2px 8px", borderRadius: 6 }}>{user.bets.length}件</span>
+                  <span style={{ fontSize: 11, color: "#5a6490", background: "rgba(255,255,255,0.06)", padding: "2px 8px", borderRadius: 6 }}>{user.teams.length}チーム{user.betCount > user.teams.length ? ` (${user.betCount}回)` : ""}</span>
                 </div>
                 <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
                   <span style={{ fontSize: 10, color: "#8892b0" }}>投資 <span style={{ fontSize: 13, fontWeight: 800, color: "#ef5350", fontFamily: "'JetBrains Mono', monospace" }}>¥{user.totalBet.toLocaleString()}</span></span>
@@ -183,28 +195,39 @@ function PersonalStatsModal({ bets, winnerData, onClose }) {
                   </div>
                 </div>
 
-                <div style={{ fontSize: 11, color: "#5a6490", marginBottom: 8, fontWeight: 600 }}>ベット明細（各ベットが当たった場合）</div>
-                {user.bets.map((bet, bi) => {
-                  const netIfHit = bet.payout - user.totalBet;
+                <div style={{ fontSize: 11, color: "#5a6490", marginBottom: 8, fontWeight: 600 }}>チーム別ベット（そのチームが優勝した場合）</div>
+                {user.teams.map((t, ti) => {
+                  const netIfHit = t.payout - user.totalBet;
                   return (
-                    <div key={bi} style={{ padding: "10px 0", borderBottom: bi < user.bets.length - 1 ? "1px solid rgba(255,255,255,0.04)" : "none" }}>
-                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
-                        <span style={{ fontSize: 12, color: "#e0e6ff", fontWeight: 600 }}>🏆 {bet.pick}</span>
-                        <span style={{ fontSize: 12, color: "#e6c866", fontWeight: 700, fontFamily: "'JetBrains Mono', monospace", flexShrink: 0 }}>×{bet.odds}</span>
+                    <div key={ti} style={{ padding: "12px 0", borderBottom: ti < user.teams.length - 1 ? "1px solid rgba(255,255,255,0.04)" : "none" }}>
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 6, flex: 1, minWidth: 0 }}>
+                          <span style={{ fontSize: 13, color: "#e0e6ff", fontWeight: 700 }}>🏆 {t.pick}</span>
+                          {t.betCount > 1 && <span style={{ fontSize: 10, color: "#5a6490", background: "rgba(255,255,255,0.06)", padding: "1px 6px", borderRadius: 4 }}>{t.betCount}回</span>}
+                        </div>
+                        <span style={{ fontSize: 14, color: "#e6c866", fontWeight: 800, fontFamily: "'JetBrains Mono', monospace", flexShrink: 0 }}>×{t.odds}</span>
                       </div>
-                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                        <span style={{ fontSize: 10, color: "#5a6490", fontFamily: "'JetBrains Mono', monospace" }}>{formatTime(bet.time)}</span>
-                        <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
-                          <span style={{ fontSize: 11, color: "#8892b0" }}>賭 <span style={{ color: "#ef5350", fontWeight: 700, fontFamily: "'JetBrains Mono', monospace" }}>¥{bet.amount.toLocaleString()}</span></span>
-                          <span style={{ fontSize: 11, color: "#8892b0" }}>→ <span style={{ color: "#4caf50", fontWeight: 700, fontFamily: "'JetBrains Mono', monospace" }}>¥{bet.payout.toLocaleString()}</span></span>
+                      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                        <div style={{ flex: 1, minWidth: 80, padding: "8px", borderRadius: 6, background: "rgba(239,83,80,0.06)", textAlign: "center" }}>
+                          <div style={{ fontSize: 9, color: "#8892b0", marginBottom: 2 }}>賭け金{t.betCount > 1 ? "(合計)" : ""}</div>
+                          <div style={{ fontSize: 13, fontWeight: 800, color: "#ef5350", fontFamily: "'JetBrains Mono', monospace" }}>¥{t.amount.toLocaleString()}</div>
+                        </div>
+                        <div style={{ flex: 1, minWidth: 80, padding: "8px", borderRadius: 6, background: "rgba(76,175,80,0.06)", textAlign: "center" }}>
+                          <div style={{ fontSize: 9, color: "#8892b0", marginBottom: 2 }}>払戻額</div>
+                          <div style={{ fontSize: 13, fontWeight: 800, color: "#4caf50", fontFamily: "'JetBrains Mono', monospace" }}>¥{t.payout.toLocaleString()}</div>
+                        </div>
+                        <div style={{ flex: 1, minWidth: 80, padding: "8px", borderRadius: 6, background: netIfHit >= 0 ? "rgba(76,175,80,0.06)" : "rgba(239,83,80,0.06)", textAlign: "center" }}>
+                          <div style={{ fontSize: 9, color: "#8892b0", marginBottom: 2 }}>的中時損益</div>
+                          <div style={{ fontSize: 13, fontWeight: 800, color: netIfHit >= 0 ? "#4caf50" : "#ef5350", fontFamily: "'JetBrains Mono', monospace" }}>
+                            {netIfHit >= 0 ? "+" : ""}¥{netIfHit.toLocaleString()}
+                          </div>
                         </div>
                       </div>
-                      <div style={{ marginTop: 4, fontSize: 10, textAlign: "right" }}>
-                        <span style={{ color: "#5a6490" }}>的中時の損益 </span>
-                        <span style={{ fontWeight: 700, fontFamily: "'JetBrains Mono', monospace", color: netIfHit >= 0 ? "#4caf50" : "#ef5350" }}>
-                          {netIfHit >= 0 ? "+" : ""}¥{netIfHit.toLocaleString()}
-                        </span>
-                      </div>
+                      {t.betCount > 1 && (
+                        <div style={{ marginTop: 6, fontSize: 10, color: "#3a4270" }}>
+                          投票: {t.times.map(time => formatTime(time)).join("、")}
+                        </div>
+                      )}
                     </div>
                   );
                 })}
@@ -216,33 +239,6 @@ function PersonalStatsModal({ bets, winnerData, onClose }) {
         <div style={{ marginTop: 12, padding: "10px", borderRadius: 8, background: "rgba(255,255,255,0.02)", textAlign: "center" }}>
           <div style={{ fontSize: 10, color: "#3a4270", lineHeight: 1.6 }}>💡 払戻額は現在のオッズに基づく予想額です<br />今後の投票でオッズが変動する可能性があります</div>
         </div>
-      </div>
-    </div>
-  );
-}
-
-function HistoryModal({ bets, onClose }) {
-  return (
-    <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(0,0,0,0.85)", zIndex: 10000, display: "flex", justifyContent: "center", alignItems: "flex-start", padding: "40px 12px", overflowY: "auto" }} onClick={onClose}>
-      <div style={{ width: "100%", maxWidth: 460, background: "linear-gradient(135deg, #1a1f3a, #0d1225)", borderRadius: 16, padding: "20px 14px", border: "1px solid rgba(255,255,255,0.08)", animation: "fadeIn 0.3s ease" }} onClick={(e) => e.stopPropagation()}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-          <div style={{ fontSize: 15, fontWeight: 700, color: "#e6c866" }}>📋 全ベット履歴（{bets.length}件）</div>
-          <button onClick={onClose} style={{ background: "rgba(255,255,255,0.08)", border: "none", color: "#8892b0", fontSize: 18, width: 32, height: 32, borderRadius: 8, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
-        </div>
-        {bets.length === 0 && <div style={{ textAlign: "center", color: "#5a6490", padding: "30px 0", fontSize: 14 }}>まだベットがありません</div>}
-        {bets.map((b, i) => (
-          <div key={i} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 0", borderBottom: i < bets.length - 1 ? "1px solid rgba(255,255,255,0.04)" : "none" }}>
-            <div style={{ flex: 1, minWidth: 0, overflow: "hidden" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 3 }}>
-                <span style={{ fontSize: 13, color: "#e0e6ff", fontWeight: 600 }}>{b.name}</span>
-                <span style={{ fontSize: 10, color: "#3a4270" }}>▸</span>
-                <span style={{ fontSize: 12, color: "#e0e6ff", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>🏆 {b.pick}</span>
-              </div>
-              <div style={{ fontSize: 10, color: "#5a6490", fontFamily: "'JetBrains Mono', monospace" }}>{formatTime(b.time)}</div>
-            </div>
-            <span style={{ fontSize: 13, fontWeight: 700, color: "#e6c866", fontFamily: "'JetBrains Mono', monospace", flexShrink: 0, marginLeft: 8 }}>¥{b.amount.toLocaleString()}</span>
-          </div>
-        ))}
       </div>
     </div>
   );
@@ -330,6 +326,33 @@ function RankingBar({ items }) {
           <div style={{ width: 40, fontSize: 10, color: "#e6c866", fontWeight: 700, fontFamily: "'JetBrains Mono', monospace", textAlign: "right", flexShrink: 0 }}>×{item.odds}</div>
         </div>
       ))}
+    </div>
+  );
+}
+
+function HistoryModal({ bets, onClose }) {
+  return (
+    <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(0,0,0,0.85)", zIndex: 10000, display: "flex", justifyContent: "center", alignItems: "flex-start", padding: "40px 12px", overflowY: "auto" }} onClick={onClose}>
+      <div style={{ width: "100%", maxWidth: 460, background: "linear-gradient(135deg, #1a1f3a, #0d1225)", borderRadius: 16, padding: "20px 14px", border: "1px solid rgba(255,255,255,0.08)", animation: "fadeIn 0.3s ease" }} onClick={(e) => e.stopPropagation()}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+          <div style={{ fontSize: 15, fontWeight: 700, color: "#e6c866" }}>📋 全ベット履歴（{bets.length}件）</div>
+          <button onClick={onClose} style={{ background: "rgba(255,255,255,0.08)", border: "none", color: "#8892b0", fontSize: 18, width: 32, height: 32, borderRadius: 8, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
+        </div>
+        {bets.length === 0 && <div style={{ textAlign: "center", color: "#5a6490", padding: "30px 0", fontSize: 14 }}>まだベットがありません</div>}
+        {bets.map((b, i) => (
+          <div key={i} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 0", borderBottom: i < bets.length - 1 ? "1px solid rgba(255,255,255,0.04)" : "none" }}>
+            <div style={{ flex: 1, minWidth: 0, overflow: "hidden" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 3 }}>
+                <span style={{ fontSize: 13, color: "#e0e6ff", fontWeight: 600 }}>{b.name}</span>
+                <span style={{ fontSize: 10, color: "#3a4270" }}>▸</span>
+                <span style={{ fontSize: 12, color: "#e0e6ff", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>🏆 {b.pick}</span>
+              </div>
+              <div style={{ fontSize: 10, color: "#5a6490", fontFamily: "'JetBrains Mono', monospace" }}>{formatTime(b.time)}</div>
+            </div>
+            <span style={{ fontSize: 13, fontWeight: 700, color: "#e6c866", fontFamily: "'JetBrains Mono', monospace", flexShrink: 0, marginLeft: 8 }}>¥{b.amount.toLocaleString()}</span>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
@@ -442,7 +465,6 @@ export default function App() {
           ))}
         </div>
 
-        {/* 最新ベット + 履歴・個人別ボタン */}
         {recentBets.length > 0 && (
           <div style={{ marginBottom: 16, background: "linear-gradient(135deg, #1a1f3a, #0d1225)", borderRadius: 14, padding: "14px 14px", border: "1px solid rgba(255,255,255,0.06)" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 10 }}>
@@ -453,7 +475,6 @@ export default function App() {
           </div>
         )}
 
-        {/* タブの代わりに：履歴＆個人別ボタン */}
         <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
           <button onClick={() => setShowHistory(true)} style={{
             flex: 1, padding: "14px 8px", borderRadius: 14, cursor: "pointer", textAlign: "center", boxSizing: "border-box",
@@ -475,7 +496,6 @@ export default function App() {
           </button>
         </div>
 
-        {/* チーム選択 */}
         <div style={{ animation: "fadeIn 0.3s ease" }}>
           {winnerPick && !countdown.expired && (
             <BetForm label={`🏆 「${TEAMS.find((t) => t.name === winnerPick)?.flag} ${winnerPick}」の優勝にベット`} onSubmit={handleWinnerBet} disabled={!winnerPick} />
