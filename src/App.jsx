@@ -223,7 +223,7 @@ function HistoryModal({ bets, onClose }) {
   );
 }
 
-/* ─── TeamButton (Detail view) ─── */
+/* ─── TeamButton ─── */
 function TeamButton({ team, selected, onClick, odds, disabled }) {
   const isSelected = selected === team.name;
   const poolColor = POOL_COLORS[team.pool] || "#6366F1";
@@ -253,7 +253,7 @@ function TeamButton({ team, selected, onClick, odds, disabled }) {
   );
 }
 
-/* ─── BetForm (Detail view) ─── */
+/* ─── BetForm ─── */
 function BetForm({ onSubmit, label, disabled }) {
   const [name, setName] = useState(() => getSavedNickname());
   const [amount, setAmount] = useState("");
@@ -326,12 +326,11 @@ function RankingBar({ items }) {
   );
 }
 
-/* ─── Prediction Card (Home view) ─── */
-function PredictionCard({ title, category, banner, topPicks, participants, deadline, topResult, onClick }) {
+/* ─── Prediction Card (Home) ─── */
+function PredictionCard({ title, category, bannerStyle, topPicks, participants, deadline, topResult, onClick }) {
   return (
     <div className="card" style={{ padding: 0, overflow: "hidden", cursor: onClick ? "pointer" : "default", marginBottom: 14 }} onClick={onClick}>
-      {/* Banner */}
-      <div style={{ position: "relative", height: 160, overflow: "hidden", ...banner }}>
+      <div style={{ position: "relative", height: 170, overflow: "hidden", ...bannerStyle }}>
         {onClick && (
           <button style={{ position: "absolute", right: 14, bottom: 14, padding: "8px 22px", borderRadius: 30, background: "#4F46E5", color: "#fff", fontSize: 13, fontWeight: 700, border: "none", boxShadow: "0 4px 14px rgba(79,70,229,0.4)", cursor: "pointer" }}>予想する</button>
         )}
@@ -342,10 +341,8 @@ function PredictionCard({ title, category, banner, topPicks, participants, deadl
           </div>
         )}
       </div>
-      {/* Content */}
       <div style={{ padding: "14px 16px 16px" }}>
         <div style={{ fontSize: 16, fontWeight: 800, color: "#1F2937", marginBottom: 10, lineHeight: 1.4 }}>{title}</div>
-        {/* Top picks as pills */}
         {topPicks && topPicks.length > 0 && (
           <div style={{ display: "flex", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
             {topPicks.map((pick, i) => (
@@ -357,7 +354,6 @@ function PredictionCard({ title, category, banner, topPicks, participants, deadl
             ))}
           </div>
         )}
-        {/* Meta */}
         <div style={{ display: "flex", alignItems: "center", gap: 14, fontSize: 12, color: "#9CA3AF" }}>
           <span style={{ display: "flex", alignItems: "center", gap: 4 }}>👥 {participants}</span>
           <span style={{ display: "flex", alignItems: "center", gap: 4 }}>⏰ {deadline}</span>
@@ -368,7 +364,7 @@ function PredictionCard({ title, category, banner, topPicks, participants, deadl
   );
 }
 
-/* ─── Coming Soon placeholder ─── */
+/* ─── Coming Soon ─── */
 function ComingSoon({ category }) {
   const configs = {
     soccer: { icon: "⚽", title: "サッカー", desc: "Jリーグ・海外リーグの予想", bg: "linear-gradient(135deg, #16A34A, #059669)", items: ["プレミアリーグ優勝予想", "W杯 アジア最終予選", "Jリーグ 順位予想"] },
@@ -377,7 +373,7 @@ function ComingSoon({ category }) {
   };
   const c = configs[category] || { icon: "🎯", title: category, desc: "", bg: "#6B7280", items: [] };
   return (
-    <div style={{ padding: "0 12px" }}>
+    <div style={{ padding: "0" }}>
       <div className="card" style={{ padding: 0, overflow: "hidden" }}>
         <div style={{ height: 140, background: c.bg, display: "flex", alignItems: "center", justifyContent: "center", position: "relative" }}>
           <span style={{ fontSize: 60, opacity: 0.3 }}>{c.icon}</span>
@@ -407,7 +403,7 @@ function ComingSoon({ category }) {
 /* ═══════════════════════ MAIN APP ═══════════════════════ */
 export default function App() {
   const [tab, setTab] = useState("top");
-  const [page, setPage] = useState("home"); // "home" or "wbc-detail"
+  const [page, setPage] = useState("home");
   const [winnerPick, setWinnerPick] = useState(null);
   const [winnerData, setWinnerData] = useState({});
   const [recentBets, setRecentBets] = useState([]);
@@ -456,7 +452,6 @@ export default function App() {
   let totalBets = 0, totalAmount = 0;
   Object.values(winnerData).forEach((d) => { totalBets += d.count; totalAmount += d.total; });
 
-  // Top picks for preview card
   const sorted = [...winnerRanking].sort((a, b) => b.pct - a.pct).filter(x => x.pct > 0);
   const topPicks = sorted.slice(0, 3).map((item, i) => {
     const colors = [
@@ -497,23 +492,19 @@ export default function App() {
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
       `}</style>
 
-      {/* ─── Fixed Header ─── */}
+      {/* ─── Header ─── */}
       <div style={{ position: "sticky", top: 0, zIndex: 100, background: "#fff", borderBottom: "1px solid #F3F4F6" }}>
-        {/* Top bar */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 16px 8px" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             {page === "wbc-detail" ? (
               <button onClick={goHome} style={{ background: "none", border: "none", fontSize: 22, cursor: "pointer", padding: "0 4px", color: "#6B7280" }}>←</button>
             ) : (
-              <span style={{ fontSize: 20 }}>⚾</span>
+              <span style={{ fontSize: 20 }}>🎱</span>
             )}
             <span style={{ fontSize: 16, fontWeight: 900, color: "#1F2937" }}>{page === "wbc-detail" ? "WBC 2026 優勝予想" : "BillPre"}</span>
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-            <div style={{ padding: "4px 12px", borderRadius: 20, background: "#FEF2F2", fontSize: 10, color: "#DC2626", fontWeight: 700 }}>⚠ シミュレーション</div>
-          </div>
+          <div style={{ padding: "4px 12px", borderRadius: 20, background: "#FEF2F2", fontSize: 10, color: "#DC2626", fontWeight: 700 }}>⚠ シミュレーション</div>
         </div>
-        {/* Tabs */}
         {page === "home" && (
           <div className="tab-scroll">
             {TABS.map((t) => (
@@ -531,27 +522,23 @@ export default function App() {
         )}
       </div>
 
-      {/* ─── HOME VIEW ─── */}
+      {/* ─── HOME ─── */}
       {page === "home" && (
         <div style={{ padding: "14px 12px 40px", animation: "fadeIn 0.2s ease" }}>
-          {/* TOP or WBC tab */}
           {(tab === "top" || tab === "wbc") && (
             <>
               <PredictionCard
                 title="WBC 2026 優勝国は？"
                 category="⚾ WBC"
-                banner={{
-                  background: "linear-gradient(135deg, #1E3A5F 0%, #2563EB 50%, #1E40AF 100%)",
-                  display: "flex", alignItems: "flex-end", padding: "0 0 16px 16px",
+                bannerStyle={{
+                  background: "url('/images/banner-wbc.jpg') center center / cover no-repeat",
                 }}
                 topPicks={topPicks}
                 participants={totalBets}
-                deadline={countdown.expired ? "締切済み" : `03/05 (水)`}
+                deadline={countdown.expired ? "締切済み" : "03/05 (水)"}
                 topResult={topResult}
                 onClick={openWbc}
               />
-
-              {/* Future space */}
               {tab === "top" && (
                 <div style={{ marginTop: 12, marginBottom: 8 }}>
                   <div style={{ fontSize: 14, fontWeight: 800, color: "#1F2937", marginBottom: 12, padding: "0 4px" }}>🔜 近日公開</div>
@@ -575,18 +562,15 @@ export default function App() {
               )}
             </>
           )}
-
-          {/* Other tabs */}
           {tab === "soccer" && <ComingSoon category="soccer" />}
           {tab === "boxing" && <ComingSoon category="boxing" />}
           {tab === "mahjong" && <ComingSoon category="mahjong" />}
         </div>
       )}
 
-      {/* ─── WBC DETAIL VIEW ─── */}
+      {/* ─── WBC DETAIL ─── */}
       {page === "wbc-detail" && (
         <div style={{ padding: "14px 12px 40px", animation: "fadeIn 0.2s ease" }}>
-          {/* Countdown */}
           {countdown.expired ? (
             <div className="card" style={{ textAlign: "center", background: "linear-gradient(135deg, #FEE2E2, #FFF1F2)", border: "1px solid #FECACA" }}>
               <div style={{ fontSize: 15, fontWeight: 700, color: "#DC2626" }}>🔒 投票は締め切りました</div>
@@ -606,7 +590,6 @@ export default function App() {
             </div>
           )}
 
-          {/* Stats */}
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 12 }}>
             <div className="card" style={{ textAlign: "center", marginBottom: 0 }}>
               <div style={{ fontSize: 11, color: "#9CA3AF", marginBottom: 4 }}>参加数</div>
@@ -618,7 +601,6 @@ export default function App() {
             </div>
           </div>
 
-          {/* Recent */}
           {recentBets.length > 0 && (
             <div className="card">
               <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 10 }}>
@@ -641,7 +623,6 @@ export default function App() {
             </div>
           )}
 
-          {/* Action buttons */}
           <div style={{ display: "flex", gap: 10, marginBottom: 14 }}>
             <button onClick={() => setShowHistory(true)} style={{ flex: 1, padding: "14px 10px", borderRadius: 16, cursor: "pointer", textAlign: "center", background: "#fff", border: "1px solid #F3F4F6", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
               <div style={{ fontSize: 20, marginBottom: 4 }}>📋</div>
@@ -653,12 +634,10 @@ export default function App() {
             </button>
           </div>
 
-          {/* Bet Form */}
           {winnerPick && !countdown.expired && (
             <BetForm label={`🏆 「${TEAMS.find((t) => t.name === winnerPick)?.flag} ${winnerPick}」にベット`} onSubmit={handleWinnerBet} disabled={!winnerPick} />
           )}
 
-          {/* Rankings */}
           {winnerRanking.some((x) => x.pct > 0) && (
             <div className="card">
               <div style={{ fontSize: 14, fontWeight: 800, color: "#1F2937", marginBottom: 2 }}>📊 オッズランキング</div>
@@ -666,7 +645,6 @@ export default function App() {
             </div>
           )}
 
-          {/* Team Selection */}
           <div style={{ marginBottom: 8 }}>
             <div style={{ fontSize: 14, fontWeight: 700, color: "#6B7280", marginBottom: 12, padding: "0 2px" }}>
               {countdown.expired ? "🔒 投票は締め切りました" : winnerPick ? "💡 他のチームに変更もできます" : "🏆 優勝チームを選んでください"}
