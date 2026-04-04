@@ -413,7 +413,9 @@ function ComingSoon({ category }) {
 function MatchCard({ match, bets, pick, onPick, onBet, isAdmin, onSetResult }) {
   const [showBets, setShowBets] = useState(false);
   const [adminPick, setAdminPick] = useState(null);
-  const isPast = match.match_date ? new Date() > new Date(match.match_date) : false;
+  const now = new Date();
+  const matchDate = match.match_date ? new Date(match.match_date) : null;
+  const isPast = matchDate ? now > matchDate : false;
   const isLocked = isPast || match.result != null;
   const matchBets = bets.filter(b => b.match_id === match.id);
   const totals = { home_win: 0, draw: 0, away_win: 0 };
@@ -438,9 +440,26 @@ function MatchCard({ match, bets, pick, onPick, onBet, isAdmin, onSetResult }) {
 
   const isSelected = (side) => pick?.matchId === match.id && pick?.side === side;
   const thisMatchSelected = pick?.matchId === match.id;
-  const dateStr = match.match_date
-    ? new Date(match.match_date).toLocaleDateString("ja-JP", { month: "numeric", day: "numeric", weekday: "short" })
+
+  // Date/time display in JST
+  const dateStr = matchDate
+    ? matchDate.toLocaleDateString("ja-JP", { month: "numeric", day: "numeric", weekday: "short" })
     : "日程TBD";
+  const timeStr = matchDate
+    ? matchDate.toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "Asia/Tokyo" })
+    : "";
+
+  // Countdown to deadline
+  let countdownStr = "";
+  if (matchDate && !isPast && !match.result) {
+    const diffMs = matchDate - now;
+    const diffDays = Math.floor(diffMs / 864e5);
+    const diffHours = Math.floor((diffMs / 36e5) % 24);
+    const diffMins = Math.floor((diffMs / 6e4) % 60);
+    if (diffDays > 0) countdownStr = `あと${diffDays}日${diffHours}時間`;
+    else if (diffHours > 0) countdownStr = `あと${diffHours}時間${diffMins}分`;
+    else countdownStr = `あと${diffMins}分`;
+  }
   const sides = ["home_win", ...(match.has_draw ? ["draw"] : []), "away_win"];
   const sideLabel = (side) => {
     if (side === "draw") return "引き分け";
@@ -458,8 +477,16 @@ function MatchCard({ match, bets, pick, onPick, onBet, isAdmin, onSetResult }) {
         <span style={{ fontSize: 10, fontWeight: 700, color: "#16A34A", background: "#F0FDF4", padding: "2px 8px", borderRadius: 10 }}>
           {STAGE_LABELS[match.stage] || match.stage}{match.group_name ? ` G${match.group_name}` : ""}
         </span>
-        <span style={{ fontSize: 10, color: "#9CA3AF", fontFamily: "'DM Mono', monospace" }}>{dateStr}</span>
+        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <span style={{ fontSize: 10, color: "#9CA3AF", fontFamily: "'DM Mono', monospace" }}>{dateStr} {timeStr}</span>
+        </div>
       </div>
+      {/* Countdown */}
+      {countdownStr && (
+        <div style={{ textAlign: "center", marginBottom: 10, padding: "4px 8px", borderRadius: 8, background: "#FEF3C7", fontSize: 10, fontWeight: 700, color: "#92400E" }}>
+          受付終了まで {countdownStr}
+        </div>
+      )}
       {/* Teams */}
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
         <div style={{ flex: 1, textAlign: "center" }}>
@@ -498,8 +525,8 @@ function MatchCard({ match, bets, pick, onPick, onBet, isAdmin, onSetResult }) {
           </div>
         </div>
       )}
-      {/* Admin: set result */}
-      {isAdmin && isLocked && !match.result && (
+      {/* Admin: set result (available even before lock for testing) */}
+      {isAdmin && !match.result && (
         <div style={{ padding: "10px", background: "#FEF3C7", borderRadius: 10, border: "1px solid #FDE68A" }}>
           <div style={{ fontSize: 10, fontWeight: 700, color: "#92400E", marginBottom: 8 }}>管理者: 結果を確定</div>
           <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
