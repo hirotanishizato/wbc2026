@@ -410,8 +410,9 @@ function ComingSoon({ category }) {
 }
 
 /* ─── MatchCard ─── */
-function MatchCard({ match, bets, pick, onPick, onBet }) {
+function MatchCard({ match, bets, pick, onPick, onBet, isAdmin, onSetResult }) {
   const [showBets, setShowBets] = useState(false);
+  const [adminPick, setAdminPick] = useState(null);
   const isPast = match.match_date ? new Date() > new Date(match.match_date) : false;
   const isLocked = isPast || match.result != null;
   const matchBets = bets.filter(b => b.match_id === match.id);
@@ -488,9 +489,45 @@ function MatchCard({ match, bets, pick, onPick, onBet }) {
           ))}
         </div>
       )}
-      {isLocked && (
+      {/* Result confirmed */}
+      {match.result && (
+        <div style={{ textAlign: "center", padding: "10px 12px", background: "#F0FDF4", borderRadius: 10, border: "1px solid #BBF7D0" }}>
+          <div style={{ fontSize: 10, color: "#16A34A", fontWeight: 600, marginBottom: 4 }}>結果</div>
+          <div style={{ fontSize: 15, fontWeight: 800, color: "#15803D" }}>
+            {match.result === "draw" ? "🤝 引き分け" : `${getFlag(match.result === "home_win" ? match.home_team : match.away_team)} ${match.result === "home_win" ? match.home_team : match.away_team} 勝利`}
+          </div>
+        </div>
+      )}
+      {/* Admin: set result */}
+      {isAdmin && isLocked && !match.result && (
+        <div style={{ padding: "10px", background: "#FEF3C7", borderRadius: 10, border: "1px solid #FDE68A" }}>
+          <div style={{ fontSize: 10, fontWeight: 700, color: "#92400E", marginBottom: 8 }}>管理者: 結果を確定</div>
+          <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
+            {sides.map(side => (
+              <button key={side} onClick={() => setAdminPick(side)} style={{
+                flex: 1, padding: "8px 4px", borderRadius: 10, fontSize: 11, fontWeight: 700, cursor: "pointer",
+                border: `2px solid ${adminPick === side ? "#D97706" : "#E5E7EB"}`,
+                background: adminPick === side ? "#FEF3C7" : "#fff",
+                color: adminPick === side ? "#92400E" : "#6B7280", fontFamily: "inherit",
+              }}>
+                {sideLabel(side)}
+              </button>
+            ))}
+          </div>
+          {adminPick && (
+            <button onClick={() => { onSetResult(match.id, adminPick); setAdminPick(null); }} style={{
+              width: "100%", padding: "10px", borderRadius: 10, border: "none", fontSize: 12, fontWeight: 700,
+              background: "#D97706", color: "#fff", cursor: "pointer", fontFamily: "inherit",
+            }}>
+              「{sideLabel(adminPick)}」で確定する
+            </button>
+          )}
+        </div>
+      )}
+      {/* Locked but no result, not admin */}
+      {!match.result && isLocked && !isAdmin && (
         <div style={{ textAlign: "center", fontSize: 11, color: "#9CA3AF", padding: "6px 0", background: "#F9FAFB", borderRadius: 8 }}>
-          {match.result ? "✅ 結果確定済み" : "🔒 受付終了"}
+          🔒 受付終了
         </div>
       )}
 
@@ -521,26 +558,50 @@ function MatchCard({ match, bets, pick, onPick, onBet }) {
                 <div style={{ flex: 1, fontSize: 9, color: "#9CA3AF", fontWeight: 700 }}>名前</div>
                 <div style={{ width: 64, fontSize: 9, color: "#9CA3AF", fontWeight: 700, textAlign: "center" }}>予想</div>
                 <div style={{ width: 56, fontSize: 9, color: "#9CA3AF", fontWeight: 700, textAlign: "right" }}>ベット</div>
-                <div style={{ width: 68, fontSize: 9, color: "#9CA3AF", fontWeight: 700, textAlign: "right" }}>的中時払戻</div>
+                <div style={{ width: 68, fontSize: 9, color: "#9CA3AF", fontWeight: 700, textAlign: "right" }}>{match.result ? "結果" : "的中時払戻"}</div>
               </div>
               {/* Bet rows */}
-              {betList.map((b, i) => (
-                <div key={i} style={{ display: "flex", alignItems: "center", padding: "9px 12px", borderBottom: i < betList.length - 1 ? "1px solid #F9FAFB" : "none", background: "#fff" }}>
-                  <div style={{ flex: 1, fontSize: 12, fontWeight: 700, color: "#1F2937", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{b.name}</div>
-                  <div style={{ width: 64, textAlign: "center" }}>
-                    <span style={{ fontSize: 10, padding: "2px 6px", borderRadius: 6, fontWeight: 700, background: sideColors[b.side]?.bg || "#F3F4F6", color: sideColors[b.side]?.color || "#6B7280" }}>
-                      {sideName(b.side)}
-                    </span>
+              {betList.map((b, i) => {
+                const isWinner = match.result && b.side === match.result;
+                const isLoser = match.result && b.side !== match.result;
+                const actualProfit = isWinner ? b.payout - b.amount : isLoser ? -b.amount : b.profit;
+                return (
+                  <div key={i} style={{
+                    display: "flex", alignItems: "center", padding: "9px 12px",
+                    borderBottom: i < betList.length - 1 ? "1px solid #F9FAFB" : "none",
+                    background: isWinner ? "#F0FDF4" : isLoser ? "#FEF2F2" : "#fff",
+                  }}>
+                    <div style={{ flex: 1, fontSize: 12, fontWeight: 700, color: "#1F2937", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {isWinner && "🎉 "}{isLoser && "💔 "}{b.name}
+                    </div>
+                    <div style={{ width: 64, textAlign: "center" }}>
+                      <span style={{ fontSize: 10, padding: "2px 6px", borderRadius: 6, fontWeight: 700, background: sideColors[b.side]?.bg || "#F3F4F6", color: sideColors[b.side]?.color || "#6B7280" }}>
+                        {sideName(b.side)}
+                      </span>
+                    </div>
+                    <div style={{ width: 56, fontSize: 11, fontWeight: 700, color: "#4F46E5", textAlign: "right", fontFamily: "'DM Mono', monospace" }}>
+                      ⚽{b.amount.toLocaleString()}
+                    </div>
+                    <div style={{ width: 68, textAlign: "right" }}>
+                      {match.result ? (
+                        <>
+                          <div style={{ fontSize: 11, fontWeight: 800, color: isWinner ? "#16A34A" : "#DC2626", fontFamily: "'DM Mono', monospace" }}>
+                            {isWinner ? `⚽${b.payout.toLocaleString()}` : "⚽0"}
+                          </div>
+                          <div style={{ fontSize: 9, color: actualProfit >= 0 ? "#16A34A" : "#DC2626", fontFamily: "'DM Mono', monospace" }}>
+                            {actualProfit >= 0 ? "+" : ""}{actualProfit.toLocaleString()}
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <div style={{ fontSize: 11, fontWeight: 800, color: "#16A34A", fontFamily: "'DM Mono', monospace" }}>⚽{b.payout.toLocaleString()}</div>
+                          <div style={{ fontSize: 9, color: b.profit >= 0 ? "#16A34A" : "#DC2626", fontFamily: "'DM Mono', monospace" }}>{b.profit >= 0 ? "+" : ""}{b.profit.toLocaleString()}</div>
+                        </>
+                      )}
+                    </div>
                   </div>
-                  <div style={{ width: 56, fontSize: 11, fontWeight: 700, color: "#4F46E5", textAlign: "right", fontFamily: "'DM Mono', monospace" }}>
-                    ⚽{b.amount.toLocaleString()}
-                  </div>
-                  <div style={{ width: 68, textAlign: "right" }}>
-                    <div style={{ fontSize: 11, fontWeight: 800, color: "#16A34A", fontFamily: "'DM Mono', monospace" }}>⚽{b.payout.toLocaleString()}</div>
-                    <div style={{ fontSize: 9, color: b.profit >= 0 ? "#16A34A" : "#DC2626", fontFamily: "'DM Mono', monospace" }}>{b.profit >= 0 ? "+" : ""}{b.profit.toLocaleString()}</div>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
               {/* Odds footer */}
               <div style={{ display: "flex", gap: 6, padding: "8px 12px", background: "#F9FAFB", borderTop: "1px solid #F3F4F6" }}>
                 {sides.map(side => totals[side] > 0 ? (
@@ -566,19 +627,60 @@ function MatchCard({ match, bets, pick, onPick, onBet }) {
   );
 }
 
-/* ─── PersonalPortfolio ─── */
-function PersonalPortfolio({ bets, matches }) {
+/* ─── Shared: calc match detail for a user ─── */
+function calcUserMatchDetail(matchId, sideAmounts, allBets, matches) {
+  const m = matches.find(x => x.id === matchId);
+  if (!m) return null;
+  const allBetsForMatch = allBets.filter(b => b.match_id === matchId);
+  const pool = {};
+  allBetsForMatch.forEach(b => { pool[b.team_side] = (pool[b.team_side] || 0) + b.amount; });
+  const totalPool = Object.values(pool).reduce((s, v) => s + v, 0);
+  const sides = ["home_win", ...(m.has_draw ? ["draw"] : []), "away_win"];
+  const userTotalForMatch = Object.values(sideAmounts).reduce((s, v) => s + v, 0);
+
+  const outcomes = {};
+  sides.forEach(side => {
+    let payout = 0;
+    if (sideAmounts[side] && pool[side] > 0) {
+      payout = Math.round(sideAmounts[side] * (totalPool / pool[side]));
+    }
+    outcomes[side] = { payout, net: payout - userTotalForMatch };
+  });
+
+  // If result is confirmed, compute actual result
+  let actualNet = null;
+  if (m.result) {
+    const winPayout = sideAmounts[m.result] && pool[m.result] > 0
+      ? Math.round(sideAmounts[m.result] * (totalPool / pool[m.result]))
+      : 0;
+    actualNet = winPayout - userTotalForMatch;
+  }
+
+  const bestNet = Math.max(...Object.values(outcomes).map(o => o.net));
+  const worstNet = Math.min(...Object.values(outcomes).map(o => o.net));
+
+  return { matchId, match: m, sideAmounts, userTotalForMatch, outcomes, bestNet, worstNet, sides, actualNet };
+}
+
+function sideNameFn(side, m) { return side === "draw" ? "引分" : side === "home_win" ? m.home_team : m.away_team; }
+
+/* ─── SettledPortfolio: 確定済み収支 ─── */
+function SettledPortfolio({ bets, matches }) {
   const [open, setOpen] = useState(false);
-  const [expanded, setExpanded] = useState(null);
-  // Group bets by user
+  const settledMatches = matches.filter(m => m.result != null);
+  if (settledMatches.length === 0) return null;
+
+  const settledMatchIds = new Set(settledMatches.map(m => m.id));
+  const settledBets = bets.filter(b => settledMatchIds.has(b.match_id));
+
+  // Group by user
   const users = {};
-  bets.forEach(b => {
+  settledBets.forEach(b => {
     if (!users[b.user_name]) users[b.user_name] = { name: b.user_name, bets: [] };
     users[b.user_name].bets.push(b);
   });
 
   const userList = Object.values(users).map(u => {
-    // Group user's bets by match
     const matchMap = {};
     u.bets.forEach(b => {
       if (!matchMap[b.match_id]) matchMap[b.match_id] = {};
@@ -586,36 +688,110 @@ function PersonalPortfolio({ bets, matches }) {
       matchMap[b.match_id][b.team_side] += b.amount;
     });
 
+    const matchDetails = Object.entries(matchMap).map(([matchId, sideAmounts]) =>
+      calcUserMatchDetail(matchId, sideAmounts, bets, matches)
+    ).filter(Boolean);
+
+    const totalBet = matchDetails.reduce((s, md) => s + md.userTotalForMatch, 0);
+    const totalEarned = matchDetails.reduce((s, md) => s + (md.actualNet || 0) + md.userTotalForMatch, 0);
+    const totalProfit = matchDetails.reduce((s, md) => s + (md.actualNet || 0), 0);
+
+    return { ...u, totalBet, totalEarned, totalProfit, matchDetails };
+  }).sort((a, b) => b.totalProfit - a.totalProfit);
+
+  if (userList.length === 0) return null;
+
+  return (
+    <div style={{ marginBottom: 14 }}>
+      <button onClick={() => setOpen(!open)} className="card" style={{
+        width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between",
+        cursor: "pointer", padding: "14px 16px", marginBottom: open ? 8 : 12,
+        background: "linear-gradient(135deg, #15803D, #16A34A)", border: "none", fontFamily: "inherit",
+      }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <span style={{ fontSize: 16 }}>🏆</span>
+          <span style={{ fontSize: 14, fontWeight: 800, color: "#fff" }}>獲得ポイント</span>
+          <span style={{ fontSize: 10, color: "rgba(255,255,255,0.7)", background: "rgba(255,255,255,0.2)", padding: "2px 8px", borderRadius: 20, fontWeight: 600 }}>
+            {settledMatches.length}試合確定
+          </span>
+        </div>
+        <span style={{ fontSize: 12, color: "rgba(255,255,255,0.6)", transition: "transform 0.2s", transform: open ? "rotate(180deg)" : "none" }}>▼</span>
+      </button>
+      {open && userList.map((user) => (
+        <div key={user.name} className="card" style={{ padding: "12px 14px", marginBottom: 6 }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+            <span style={{ fontSize: 14, fontWeight: 700, color: "#1F2937" }}>{user.name}</span>
+            <span style={{ fontSize: 16, fontWeight: 900, color: user.totalProfit >= 0 ? "#16A34A" : "#DC2626", fontFamily: "'DM Mono', monospace" }}>
+              {user.totalProfit >= 0 ? "+" : ""}{user.totalProfit.toLocaleString()}
+            </span>
+          </div>
+          <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
+            <div style={{ flex: 1, padding: "6px 4px", borderRadius: 8, background: "#F3F4F6", textAlign: "center" }}>
+              <div style={{ fontSize: 9, color: "#9CA3AF" }}>投資</div>
+              <div style={{ fontSize: 11, fontWeight: 800, color: "#4B5563", fontFamily: "'DM Mono', monospace" }}>⚽{user.totalBet.toLocaleString()}</div>
+            </div>
+            <div style={{ flex: 1, padding: "6px 4px", borderRadius: 8, background: "#F0FDF4", textAlign: "center" }}>
+              <div style={{ fontSize: 9, color: "#9CA3AF" }}>払戻</div>
+              <div style={{ fontSize: 11, fontWeight: 800, color: "#16A34A", fontFamily: "'DM Mono', monospace" }}>⚽{user.totalEarned.toLocaleString()}</div>
+            </div>
+            <div style={{ flex: 1, padding: "6px 4px", borderRadius: 8, background: user.totalProfit >= 0 ? "#F0FDF4" : "#FEF2F2", textAlign: "center" }}>
+              <div style={{ fontSize: 9, color: "#9CA3AF" }}>損益</div>
+              <div style={{ fontSize: 11, fontWeight: 800, color: user.totalProfit >= 0 ? "#16A34A" : "#DC2626", fontFamily: "'DM Mono', monospace" }}>
+                {user.totalProfit >= 0 ? "+" : ""}{user.totalProfit.toLocaleString()}
+              </div>
+            </div>
+          </div>
+          {/* Per match results */}
+          {user.matchDetails.map((md, mi) => {
+            const won = md.actualNet != null && md.actualNet >= 0;
+            return (
+              <div key={md.matchId} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 0", borderTop: mi > 0 ? "1px solid #F3F4F6" : "none" }}>
+                <span style={{ fontSize: 12 }}>{won ? "🎉" : "💔"}</span>
+                <span style={{ fontSize: 11, color: "#6B7280", flex: 1 }}>
+                  {getFlag(md.match.home_team)} {md.match.home_team} vs {md.match.away_team} {getFlag(md.match.away_team)}
+                </span>
+                <span style={{ fontSize: 11, fontWeight: 800, color: md.actualNet >= 0 ? "#16A34A" : "#DC2626", fontFamily: "'DM Mono', monospace" }}>
+                  {md.actualNet >= 0 ? "+" : ""}{md.actualNet.toLocaleString()}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/* ─── ActivePortfolio: 未確定ベット ─── */
+function ActivePortfolio({ bets, matches }) {
+  const [open, setOpen] = useState(false);
+  const [expanded, setExpanded] = useState(null);
+
+  const activeMatches = matches.filter(m => m.result == null);
+  const activeMatchIds = new Set(activeMatches.map(m => m.id));
+  const activeBets = bets.filter(b => activeMatchIds.has(b.match_id));
+
+  // Group by user
+  const users = {};
+  activeBets.forEach(b => {
+    if (!users[b.user_name]) users[b.user_name] = { name: b.user_name, bets: [] };
+    users[b.user_name].bets.push(b);
+  });
+
+  const userList = Object.values(users).map(u => {
+    const matchMap = {};
+    u.bets.forEach(b => {
+      if (!matchMap[b.match_id]) matchMap[b.match_id] = {};
+      if (!matchMap[b.match_id][b.team_side]) matchMap[b.match_id][b.team_side] = 0;
+      matchMap[b.match_id][b.team_side] += b.amount;
+    });
+
+    const matchDetails = Object.entries(matchMap).map(([matchId, sideAmounts]) =>
+      calcUserMatchDetail(matchId, sideAmounts, bets, matches)
+    ).filter(Boolean);
+
     const totalBet = u.bets.reduce((s, b) => s + b.amount, 0);
     const matchCount = Object.keys(matchMap).length;
-
-    // For each match, calc payout per outcome
-    const matchDetails = Object.entries(matchMap).map(([matchId, sideAmounts]) => {
-      const m = matches.find(x => x.id === matchId);
-      if (!m) return null;
-      const allBetsForMatch = bets.filter(b => b.match_id === matchId);
-      const pool = {};
-      allBetsForMatch.forEach(b => { pool[b.team_side] = (pool[b.team_side] || 0) + b.amount; });
-      const totalPool = Object.values(pool).reduce((s, v) => s + v, 0);
-      const sides = ["home_win", ...(m.has_draw ? ["draw"] : []), "away_win"];
-      const userTotalForMatch = Object.values(sideAmounts).reduce((s, v) => s + v, 0);
-
-      // For each possible outcome, what does this user get?
-      const outcomes = {};
-      sides.forEach(side => {
-        let payout = 0;
-        if (sideAmounts[side] && pool[side] > 0) {
-          payout = Math.round(sideAmounts[side] * (totalPool / pool[side]));
-        }
-        outcomes[side] = { payout, net: payout - userTotalForMatch };
-      });
-
-      const bestNet = Math.max(...Object.values(outcomes).map(o => o.net));
-      const worstNet = Math.min(...Object.values(outcomes).map(o => o.net));
-
-      return { matchId, match: m, sideAmounts, userTotalForMatch, outcomes, bestNet, worstNet, sides };
-    }).filter(Boolean);
-
     const bestCase = matchDetails.reduce((s, md) => s + md.bestNet, 0);
     const worstCase = matchDetails.reduce((s, md) => s + md.worstNet, 0);
 
@@ -623,8 +799,6 @@ function PersonalPortfolio({ bets, matches }) {
   }).sort((a, b) => b.totalBet - a.totalBet);
 
   if (userList.length === 0) return null;
-
-  const sideName = (side, m) => side === "draw" ? "引分" : side === "home_win" ? m.home_team : m.away_team;
 
   return (
     <div style={{ marginBottom: 14 }}>
@@ -635,7 +809,7 @@ function PersonalPortfolio({ bets, matches }) {
       }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <span style={{ fontSize: 16 }}>👤</span>
-          <span style={{ fontSize: 14, fontWeight: 800, color: "#fff" }}>個人別ポートフォリオ</span>
+          <span style={{ fontSize: 14, fontWeight: 800, color: "#fff" }}>投票中ポートフォリオ</span>
           <span style={{ fontSize: 10, color: "rgba(255,255,255,0.7)", background: "rgba(255,255,255,0.2)", padding: "2px 8px", borderRadius: 20, fontWeight: 600 }}>
             {userList.length}人
           </span>
@@ -670,7 +844,6 @@ function PersonalPortfolio({ bets, matches }) {
 
           {expanded === ui && (
             <div style={{ padding: "0 16px 16px", borderTop: "1px solid #F3F4F6" }}>
-              {/* Summary cards */}
               <div style={{ display: "flex", gap: 6, margin: "12px 0" }}>
                 {[
                   { label: "総投資", value: `⚽${user.totalBet.toLocaleString()}`, bg: "#F3F4F6", color: "#4B5563" },
@@ -684,7 +857,6 @@ function PersonalPortfolio({ bets, matches }) {
                 ))}
               </div>
 
-              {/* Per-match details */}
               {user.matchDetails.map((md, mi) => (
                 <div key={md.matchId} style={{ padding: "10px 0", borderBottom: mi < user.matchDetails.length - 1 ? "1px solid #F3F4F6" : "none" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
@@ -693,24 +865,22 @@ function PersonalPortfolio({ bets, matches }) {
                     <span style={{ fontSize: 12 }}>{getFlag(md.match.away_team)}</span>
                     <span style={{ marginLeft: "auto", fontSize: 10, color: "#9CA3AF", fontFamily: "'DM Mono', monospace" }}>⚽{md.userTotalForMatch.toLocaleString()}</span>
                   </div>
-                  {/* What this user bet on */}
                   <div style={{ display: "flex", gap: 4, marginBottom: 6, flexWrap: "wrap" }}>
                     {Object.entries(md.sideAmounts).map(([side, amt]) => (
                       <span key={side} style={{ fontSize: 10, padding: "2px 8px", borderRadius: 6, fontWeight: 700,
                         background: side === "home_win" ? "#EFF6FF" : side === "draw" ? "#FEF9C3" : "#FFF7ED",
                         color: side === "home_win" ? "#2563EB" : side === "draw" ? "#92400E" : "#EA580C",
                       }}>
-                        {sideName(side, md.match)} ⚽{amt.toLocaleString()}
+                        {sideNameFn(side, md.match)} ⚽{amt.toLocaleString()}
                       </span>
                     ))}
                   </div>
-                  {/* Outcome scenarios */}
                   <div style={{ display: "flex", gap: 4 }}>
                     {md.sides.map(side => {
                       const o = md.outcomes[side];
                       return (
                         <div key={side} style={{ flex: 1, padding: "6px 4px", borderRadius: 8, background: "#F9FAFB", textAlign: "center", border: "1px solid #F3F4F6" }}>
-                          <div style={{ fontSize: 9, color: "#9CA3AF", marginBottom: 2 }}>{sideName(side, md.match)}勝</div>
+                          <div style={{ fontSize: 9, color: "#9CA3AF", marginBottom: 2 }}>{sideNameFn(side, md.match)}勝</div>
                           <div style={{ fontSize: 11, fontWeight: 800, color: o.net >= 0 ? "#16A34A" : "#DC2626", fontFamily: "'DM Mono', monospace" }}>
                             {o.net >= 0 ? "+" : ""}{o.net.toLocaleString()}
                           </div>
@@ -737,6 +907,7 @@ export default function App() {
   const [showHistory, setShowHistory] = useState(false);
   const [matches, setMatches] = useState([]);
   const [matchPick, setMatchPick] = useState(null);
+  const [isAdmin] = useState(() => new URLSearchParams(window.location.search).has("admin"));
 
   const loadData = useCallback(async (retry = 0) => {
     try {
@@ -765,6 +936,11 @@ export default function App() {
     return () => { supabase.removeChannel(ch); };
   }, [loadData]);
 
+  useEffect(() => {
+    const ch = supabase.channel("matches-realtime").on("postgres_changes", { event: "UPDATE", schema: "public", table: "matches" }, () => { loadMatches(); }).subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, [loadMatches]);
+
   const showToast = (msg) => { setToast(msg); setTimeout(() => setToast(""), 2500); };
 
   const handleMatchPick = (matchId, side) => {
@@ -776,6 +952,11 @@ export default function App() {
     if (!matchPick) return;
     const { error } = await supabase.from("bets").insert({ match_id: matchPick.matchId, team_side: matchPick.side, user_name: name, amount });
     if (!error) { setMatchPick(null); showToast("ベット完了！⚽"); loadData(); }
+  };
+
+  const handleSetResult = async (matchId, result) => {
+    const { error } = await supabase.from("matches").update({ result }).eq("id", matchId);
+    if (!error) { showToast("結果を確定しました！"); loadMatches(); }
   };
 
   const stageOrder = ["group"];
@@ -813,7 +994,10 @@ export default function App() {
             <span style={{ fontSize: 20 }}>⚽</span>
             <span style={{ fontSize: 16, fontWeight: 900, color: "#1F2937" }}>2026Wカップ</span>
           </div>
-          <div style={{ padding: "4px 12px", borderRadius: 20, background: "#FEF2F2", fontSize: 10, color: "#DC2626", fontWeight: 700 }}>⚠ シミュレーション</div>
+          <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+            {isAdmin && <div style={{ padding: "4px 12px", borderRadius: 20, background: "#FEF3C7", fontSize: 10, color: "#92400E", fontWeight: 700 }}>管理者</div>}
+            <div style={{ padding: "4px 12px", borderRadius: 20, background: "#FEF2F2", fontSize: 10, color: "#DC2626", fontWeight: 700 }}>⚠ シミュレーション</div>
+          </div>
         </div>
       </div>
 
@@ -828,7 +1012,8 @@ export default function App() {
             <span>📅 6/15 開幕</span>
           </div>
         </div>
-        <PersonalPortfolio bets={rawBets} matches={matches} />
+        <SettledPortfolio bets={rawBets} matches={matches} />
+        <ActivePortfolio bets={rawBets} matches={matches} />
 
         {matches.length === 0 && <div style={{ textAlign: "center", padding: 40, color: "#9CA3AF" }}>読み込み中...</div>}
         {stageOrder.map(stage => {
@@ -841,7 +1026,7 @@ export default function App() {
                 {icons[stage]} {STAGE_LABELS[stage]}
               </div>
               {sm.map(match => (
-                <MatchCard key={match.id} match={match} bets={rawBets} pick={matchPick} onPick={handleMatchPick} onBet={handleMatchBet} />
+                <MatchCard key={match.id} match={match} bets={rawBets} pick={matchPick} onPick={handleMatchPick} onBet={handleMatchBet} isAdmin={isAdmin} onSetResult={handleSetResult} />
               ))}
             </div>
           );
