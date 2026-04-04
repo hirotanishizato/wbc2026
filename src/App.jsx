@@ -732,8 +732,11 @@ function calcUserMatchDetail(matchId, sideAmounts, allBets, matches) {
 function sideNameFn(side, m) { return side === "draw" ? "引分" : side === "home_win" ? m.home_team : m.away_team; }
 
 /* ─── SettledPortfolio: 確定済み収支 ─── */
-function SettledPortfolio({ bets, matches }) {
+function SettledPortfolio({ bets, matches, settlements, isAdmin, onAddSettlement, onDeleteSettlement }) {
   const [open, setOpen] = useState(false);
+  const [settlementUser, setSettlementUser] = useState(null);
+  const [settlementAmount, setSettlementAmount] = useState("");
+  const [settlementNote, setSettlementNote] = useState("");
   const settledMatches = matches.filter(m => m.result != null);
   if (settledMatches.length === 0) return null;
 
@@ -745,6 +748,13 @@ function SettledPortfolio({ bets, matches }) {
   settledBets.forEach(b => {
     if (!users[b.user_name]) users[b.user_name] = { name: b.user_name, bets: [] };
     users[b.user_name].bets.push(b);
+  });
+
+  // Group settlements by user
+  const userSettlements = {};
+  (settlements || []).forEach(s => {
+    if (!userSettlements[s.user_name]) userSettlements[s.user_name] = [];
+    userSettlements[s.user_name].push(s);
   });
 
   const userList = Object.values(users).map(u => {
@@ -763,10 +773,25 @@ function SettledPortfolio({ bets, matches }) {
     const totalEarned = matchDetails.reduce((s, md) => s + (md.actualNet || 0) + md.userTotalForMatch, 0);
     const totalProfit = matchDetails.reduce((s, md) => s + (md.actualNet || 0), 0);
 
-    return { ...u, totalBet, totalEarned, totalProfit, matchDetails };
+    // Settlement totals
+    const uSettlements = userSettlements[u.name] || [];
+    const totalPayout = uSettlements.filter(s => s.type === "payout").reduce((sum, s) => sum + s.amount, 0);
+    const totalCollection = uSettlements.filter(s => s.type === "collection").reduce((sum, s) => sum + s.amount, 0);
+    const settledAmount = totalPayout - totalCollection; // positive = paid out, negative = collected more
+    const balance = totalProfit - settledAmount; // remaining to settle
+
+    return { ...u, totalBet, totalEarned, totalProfit, matchDetails, totalPayout, totalCollection, settledAmount, balance, settlements: uSettlements };
   }).sort((a, b) => b.totalProfit - a.totalProfit);
 
   if (userList.length === 0) return null;
+
+  const handleSettlement = (type) => {
+    if (!settlementUser || !settlementAmount || Number(settlementAmount) <= 0) return;
+    onAddSettlement(settlementUser, Number(settlementAmount), type, settlementNote || null);
+    setSettlementUser(null);
+    setSettlementAmount("");
+    setSettlementNote("");
+  };
 
   return (
     <div style={{ marginBottom: 14 }}>
@@ -788,8 +813,8 @@ function SettledPortfolio({ bets, matches }) {
         <div key={user.name} className="card" style={{ padding: "12px 14px", marginBottom: 6 }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
             <span style={{ fontSize: 14, fontWeight: 700, color: "#1F2937" }}>{user.name}</span>
-            <span style={{ fontSize: 16, fontWeight: 900, color: user.totalProfit >= 0 ? "#16A34A" : "#DC2626", fontFamily: "'DM Mono', monospace" }}>
-              {user.totalProfit >= 0 ? "+" : ""}{user.totalProfit.toLocaleString()}
+            <span style={{ fontSize: 16, fontWeight: 900, color: user.balance >= 0 ? "#16A34A" : "#DC2626", fontFamily: "'DM Mono', monospace" }}>
+              {user.balance >= 0 ? "+" : ""}{user.balance.toLocaleString()}
             </span>
           </div>
           <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
@@ -808,6 +833,29 @@ function SettledPortfolio({ bets, matches }) {
               </div>
             </div>
           </div>
+          {/* Settlement summary row */}
+          {(user.totalPayout > 0 || user.totalCollection > 0) && (
+            <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
+              {user.totalPayout > 0 && (
+                <div style={{ flex: 1, padding: "6px 4px", borderRadius: 8, background: "#EFF6FF", textAlign: "center" }}>
+                  <div style={{ fontSize: 9, color: "#9CA3AF" }}>支払済</div>
+                  <div style={{ fontSize: 11, fontWeight: 800, color: "#2563EB", fontFamily: "'DM Mono', monospace" }}>-{user.totalPayout.toLocaleString()}</div>
+                </div>
+              )}
+              {user.totalCollection > 0 && (
+                <div style={{ flex: 1, padding: "6px 4px", borderRadius: 8, background: "#FFF7ED", textAlign: "center" }}>
+                  <div style={{ fontSize: 9, color: "#9CA3AF" }}>回収済</div>
+                  <div style={{ fontSize: 11, fontWeight: 800, color: "#EA580C", fontFamily: "'DM Mono', monospace" }}>+{user.totalCollection.toLocaleString()}</div>
+                </div>
+              )}
+              <div style={{ flex: 1, padding: "6px 4px", borderRadius: 8, background: user.balance >= 0 ? "#F0FDF4" : "#FEF2F2", textAlign: "center", border: "2px solid " + (user.balance >= 0 ? "#86EFAC" : "#FCA5A5") }}>
+                <div style={{ fontSize: 9, color: "#9CA3AF" }}>残高</div>
+                <div style={{ fontSize: 11, fontWeight: 800, color: user.balance >= 0 ? "#16A34A" : "#DC2626", fontFamily: "'DM Mono', monospace" }}>
+                  {user.balance >= 0 ? "+" : ""}{user.balance.toLocaleString()}
+                </div>
+              </div>
+            </div>
+          )}
           {/* Per match results */}
           {user.matchDetails.map((md, mi) => {
             const won = md.actualNet != null && md.actualNet >= 0;
@@ -823,6 +871,62 @@ function SettledPortfolio({ bets, matches }) {
               </div>
             );
           })}
+          {/* Settlement history */}
+          {user.settlements.length > 0 && (
+            <div style={{ marginTop: 6, borderTop: "1px solid #E5E7EB", paddingTop: 6 }}>
+              <div style={{ fontSize: 10, color: "#9CA3AF", marginBottom: 4 }}>精算履歴</div>
+              {user.settlements.map(s => (
+                <div key={s.id} style={{ display: "flex", alignItems: "center", gap: 6, padding: "3px 0", fontSize: 10 }}>
+                  <span>{s.type === "payout" ? "💸" : "📥"}</span>
+                  <span style={{ color: "#6B7280", flex: 1 }}>
+                    {s.type === "payout" ? "支払" : "回収"} {s.note ? `(${s.note})` : ""}
+                  </span>
+                  <span style={{ fontWeight: 700, color: s.type === "payout" ? "#2563EB" : "#EA580C", fontFamily: "'DM Mono', monospace" }}>
+                    {s.type === "payout" ? "-" : "+"}{s.amount.toLocaleString()}
+                  </span>
+                  {isAdmin && (
+                    <button onClick={() => onDeleteSettlement(s.id)} style={{
+                      background: "none", border: "none", color: "#DC2626", fontSize: 10, cursor: "pointer", padding: "2px 4px",
+                    }}>✕</button>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+          {/* Admin: settlement buttons */}
+          {isAdmin && (
+            <div style={{ marginTop: 8, borderTop: "1px solid #E5E7EB", paddingTop: 8 }}>
+              {settlementUser === user.name ? (
+                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  <div style={{ display: "flex", gap: 6 }}>
+                    <input type="number" placeholder="金額" value={settlementAmount} onChange={e => setSettlementAmount(e.target.value)}
+                      style={{ flex: 1, padding: "6px 8px", borderRadius: 8, border: "1px solid #E5E7EB", fontSize: 12, fontFamily: "inherit" }} />
+                    <input type="text" placeholder="メモ（任意）" value={settlementNote} onChange={e => setSettlementNote(e.target.value)}
+                      style={{ flex: 1, padding: "6px 8px", borderRadius: 8, border: "1px solid #E5E7EB", fontSize: 12, fontFamily: "inherit" }} />
+                  </div>
+                  <div style={{ display: "flex", gap: 6 }}>
+                    <button onClick={() => handleSettlement("payout")} style={{
+                      flex: 1, padding: "8px", borderRadius: 8, border: "none", background: "#2563EB", color: "#fff",
+                      fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
+                    }}>💸 支払い</button>
+                    <button onClick={() => handleSettlement("collection")} style={{
+                      flex: 1, padding: "8px", borderRadius: 8, border: "none", background: "#EA580C", color: "#fff",
+                      fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
+                    }}>📥 回収</button>
+                    <button onClick={() => { setSettlementUser(null); setSettlementAmount(""); setSettlementNote(""); }} style={{
+                      padding: "8px 12px", borderRadius: 8, border: "1px solid #E5E7EB", background: "#fff", color: "#6B7280",
+                      fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
+                    }}>✕</button>
+                  </div>
+                </div>
+              ) : (
+                <button onClick={() => setSettlementUser(user.name)} style={{
+                  width: "100%", padding: "8px", borderRadius: 8, border: "1px dashed #D1D5DB", background: "#FAFAFA",
+                  color: "#6B7280", fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: "inherit",
+                }}>💰 精算を記録</button>
+              )}
+            </div>
+          )}
         </div>
       ))}
     </div>
@@ -976,6 +1080,7 @@ export default function App() {
   const [matchPick, setMatchPick] = useState(null);
   const [isAdmin] = useState(() => new URLSearchParams(window.location.search).has("admin"));
   const [matchTab, setMatchTab] = useState("open"); // "open" or "closed"
+  const [settlements, setSettlements] = useState([]);
 
   const loadData = useCallback(async (retry = 0) => {
     try {
@@ -997,7 +1102,12 @@ export default function App() {
     if (data) setMatches(data);
   }, []);
 
-  useEffect(() => { loadData(); loadMatches(); }, [loadData, loadMatches]);
+  const loadSettlements = useCallback(async () => {
+    const { data } = await supabase.from("settlements").select("*").order("created_at", { ascending: false });
+    if (data) setSettlements(data);
+  }, []);
+
+  useEffect(() => { loadData(); loadMatches(); loadSettlements(); }, [loadData, loadMatches, loadSettlements]);
 
   useEffect(() => {
     const ch = supabase.channel("bets-realtime").on("postgres_changes", { event: "INSERT", schema: "public", table: "bets" }, () => { loadData(); }).subscribe();
@@ -1008,6 +1118,11 @@ export default function App() {
     const ch = supabase.channel("matches-realtime").on("postgres_changes", { event: "UPDATE", schema: "public", table: "matches" }, () => { loadMatches(); }).subscribe();
     return () => { supabase.removeChannel(ch); };
   }, [loadMatches]);
+
+  useEffect(() => {
+    const ch = supabase.channel("settlements-realtime").on("postgres_changes", { event: "*", schema: "public", table: "settlements" }, () => { loadSettlements(); }).subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, [loadSettlements]);
 
   const showToast = (msg) => { setToast(msg); setTimeout(() => setToast(""), 2500); };
 
@@ -1041,6 +1156,16 @@ export default function App() {
     if (!userName || !amount || amount <= 0) return;
     const { error } = await supabase.from("bets").update({ user_name: userName, amount }).eq("id", betId);
     if (!error) { showToast("ベットを修正しました"); loadData(); }
+  };
+
+  const handleAddSettlement = async (userName, amount, type, note) => {
+    const { error } = await supabase.from("settlements").insert({ user_name: userName, amount, type, note });
+    if (!error) { showToast(type === "payout" ? "支払いを記録しました" : "回収を記録しました"); loadSettlements(); }
+  };
+
+  const handleDeleteSettlement = async (id) => {
+    const { error } = await supabase.from("settlements").delete().eq("id", id);
+    if (!error) { showToast("精算記録を削除しました"); loadSettlements(); }
   };
 
   const stageOrder = ["group"];
@@ -1106,7 +1231,7 @@ export default function App() {
             </div>
           </div>
         </div>
-        <SettledPortfolio bets={rawBets} matches={matches} />
+        <SettledPortfolio bets={rawBets} matches={matches} settlements={settlements} isAdmin={isAdmin} onAddSettlement={handleAddSettlement} onDeleteSettlement={handleDeleteSettlement} />
         <ActivePortfolio bets={rawBets} matches={matches} />
 
         {/* Match Tabs */}
