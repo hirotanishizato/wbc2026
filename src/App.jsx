@@ -1087,9 +1087,9 @@ export default function App() {
 
       {/* ─── Main Content ─── */}
       <div style={{ padding: "14px 12px 40px", animation: "fadeIn 0.2s ease" }}>
-        <div className="card" style={{
-          position: "relative", overflow: "hidden", padding: "20px 16px", marginBottom: 14, border: "none",
-          background: "linear-gradient(135deg, rgba(20,83,45,0.85), rgba(22,163,106,0.85))",
+        <div style={{
+          position: "relative", overflow: "hidden", padding: "20px 16px", marginBottom: 14,
+          borderRadius: 0, background: "linear-gradient(135deg, rgba(0,30,80,0.85), rgba(0,70,150,0.85))",
         }}>
           <div style={{
             position: "absolute", top: 0, left: 0, right: 0, bottom: 0,
