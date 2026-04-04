@@ -648,7 +648,7 @@ export default function App() {
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 16px 14px" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <span style={{ fontSize: 20 }}>⚽</span>
-            <span style={{ fontSize: 16, fontWeight: 900, color: "#1F2937" }}>BillPre</span>
+            <span style={{ fontSize: 16, fontWeight: 900, color: "#1F2937" }}>2026Wカップ</span>
           </div>
           <div style={{ padding: "4px 12px", borderRadius: 20, background: "#FEF2F2", fontSize: 10, color: "#DC2626", fontWeight: 700 }}>⚠ シミュレーション</div>
         </div>
