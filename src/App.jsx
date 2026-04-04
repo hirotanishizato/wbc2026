@@ -362,7 +362,7 @@ function PredictionCard({ title, category, bannerStyle, topPicks, participants, 
           <div style={{ display: "flex", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
             {topPicks.map((pick, i) => (
               <span key={i} style={{ padding: "6px 16px", borderRadius: 20, fontSize: 13, fontWeight: 700,
-                background background: pick.bg || "#F3F4F6", color: pick.color || "#4B5563", border: `1px solid ${pick.borderColor || "#E5E7EB"}` }}>{pick.label}</span>
+                background: pick.bg || "#F3F4F6", color: pick.color || "#4B5563", border: `1px solid ${pick.borderColor || "#E5E7EB"}` }}>{pick.label}</span>
             ))}
           </div>
         )}
