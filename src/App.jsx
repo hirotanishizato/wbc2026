@@ -361,7 +361,8 @@ function PredictionCard({ title, category, bannerStyle, topPicks, participants, 
         {topPicks && topPicks.length > 0 && (
           <div style={{ display: "flex", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
             {topPicks.map((pick, i) => (
-              <span key={i} style={{ padding: "6px 16px", borderRadius: 20, fontSize: 13, fontWeight: 700, background: pick.bg || "#F3F4F6", color: pick.color || "#4B5563", border: `1px solid ${pick.borderColor || "#E5E7EB"}` }}>{pick.label}</span>
+              <span key={i} style={{ padding: "6px 16px", borderRadius: 20, fontSize: 13, fontWeight: 700,
+                background background: pick.bg || "#F3F4F6", color: pick.color || "#4B5563", border: `1px solid ${pick.borderColor || "#E5E7EB"}` }}>{pick.label}</span>
             ))}
           </div>
         )}
@@ -379,7 +380,7 @@ function PredictionCard({ title, category, bannerStyle, topPicks, participants, 
 function ComingSoon({ category }) {
   const configs = {
     boxing: { icon: "🥊", title: "ボクシング", desc: "世界タイトル戦の勝敗予想", bg: "linear-gradient(135deg, #DC2626, #991B1B)", items: ["井上尚弥 次戦予想", "PFP ランキング予想", "階級別チャンピオン予想"] },
-    mahjong: { icon: "🀄", title: "麻雀", desc: "Mリーグ・タイトル戦の予想", bg: "linear-gradient(135deg, #7C3AED, #5B21B6)", items: ["Mリーグ優勝予想", "最高位戦 予想", "最強位決定戦 予想"] },
+    mahjong: { icon: "🀄", title: "麻雀", desc: "Mリーグヷタイトル戦の予想", bg: "linear-gradient(135deg, #7C3AED, #5B21B6)", items: ["Mリーグ優勝予想", "最高位戦 予想", "最強位決定戦 予想"] },
   };
   const c = configs[category] || { icon: "🎯", title: category, desc: "", bg: "#6B7280", items: [] };
   return (
@@ -410,6 +411,7 @@ function ComingSoon({ category }) {
 
 /* ─── MatchCard ─── */
 function MatchCard({ match, bets, pick, onPick, onBet }) {
+  const [showBets, setShowBets] = useState(false);
   const isPast = match.match_date ? new Date() > new Date(match.match_date) : false;
   const isLocked = isPast || match.result != null;
   const matchBets = bets.filter(b => b.match_id === match.id);
@@ -418,6 +420,21 @@ function MatchCard({ match, bets, pick, onPick, onBet }) {
   const totalAmt = Object.values(totals).reduce((s, v) => s + v, 0);
   const pcts = {};
   ["home_win", "draw", "away_win"].forEach(k => { pcts[k] = totalAmt > 0 ? Math.round(totals[k] / totalAmt * 100) : 0; });
+  const matchOdds = {};
+  ["home_win", "draw", "away_win"].forEach(k => { matchOdds[k] = totals[k] > 0 ? (totalAmt / totals[k]).toFixed(2) : "-"; });
+
+  // Per-person breakdown with payout
+  const betsByPerson = {};
+  matchBets.forEach(b => {
+    const key = `${b.user_name}__${b.team_side}`;
+    if (!betsByPerson[key]) betsByPerson[key] = { name: b.user_name, side: b.team_side, amount: 0 };
+    betsByPerson[key].amount += b.amount;
+  });
+  const betList = Object.values(betsByPerson).map(b => {
+    const payout = totals[b.side] > 0 ? Math.round(b.amount * (totalAmt / totals[b.side])) : 0;
+    return { ...b, payout, profit: payout - b.amount };
+  }).sort((a, b) => b.amount - a.amount);
+
   const isSelected = (side) => pick?.matchId === match.id && pick?.side === side;
   const thisMatchSelected = pick?.matchId === match.id;
   const dateStr = match.match_date
@@ -429,16 +446,20 @@ function MatchCard({ match, bets, pick, onPick, onBet }) {
     const n = side === "home_win" ? match.home_team : match.away_team;
     return n.length > 5 ? (side === "home_win" ? "ホーム勝" : "アウェイ勝") : `${n}勝`;
   };
+  const sideName = (side) => side === "draw" ? "引分" : side === "home_win" ? match.home_team : match.away_team;
   const betLabel = (side) => side === "draw" ? "引き分け" : side === "home_win" ? `${match.home_team}勝ち` : `${match.away_team}勝ち`;
+  const sideColors = { home_win: { bg: "#EFF6FF", color: "#2563EB" }, draw: { bg: "#FEF9C3", color: "#92400E" }, away_win: { bg: "#FFF7ED", color: "#EA580C" } };
 
   return (
     <div className="card" style={{ marginBottom: 10, border: thisMatchSelected ? "2px solid #4F46E5" : "1px solid #F3F4F6", transition: "border 0.15s" }}>
+      {/* Header */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
         <span style={{ fontSize: 10, fontWeight: 700, color: "#16A34A", background: "#F0FDF4", padding: "2px 8px", borderRadius: 10 }}>
           {STAGE_LABELS[match.stage] || match.stage}{match.group_name ? ` G${match.group_name}` : ""}
         </span>
         <span style={{ fontSize: 10, color: "#9CA3AF", fontFamily: "'DM Mono', monospace" }}>{dateStr}</span>
       </div>
+      {/* Teams */}
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
         <div style={{ flex: 1, textAlign: "center" }}>
           <div style={{ fontSize: 26 }}>{getFlag(match.home_team)}</div>
@@ -450,6 +471,7 @@ function MatchCard({ match, bets, pick, onPick, onBet }) {
           <div style={{ fontSize: 12, fontWeight: 700, color: "#1F2937", marginTop: 4, lineHeight: 1.3 }}>{match.away_team}</div>
         </div>
       </div>
+      {/* Pick buttons */}
       {!isLocked && (
         <div style={{ display: "flex", gap: 6 }}>
           {sides.map(side => (
@@ -461,6 +483,7 @@ function MatchCard({ match, bets, pick, onPick, onBet }) {
             }}>
               {sideLabel(side)}
               {pcts[side] > 0 && <div style={{ fontSize: 9, color: "#9CA3AF", marginTop: 2 }}>{pcts[side]}%</div>}
+              {matchOdds[side] !== "-" && <div style={{ fontSize: 9, color: "#4F46E5", marginTop: 1 }}>×{matchOdds[side]}</div>}
             </button>
           ))}
         </div>
@@ -470,6 +493,70 @@ function MatchCard({ match, bets, pick, onPick, onBet }) {
           {match.result ? "✅ 結果確定済み" : "🔒 受付終了"}
         </div>
       )}
+
+      {/* Bet summary toggle */}
+      {matchBets.length > 0 && (
+        <div style={{ marginTop: 10 }}>
+          <button onClick={() => setShowBets(!showBets)} style={{
+            width: "100%", padding: "8px 12px", borderRadius: 10, background: "#F9FAFB",
+            border: "1px solid #F3F4F6", cursor: "pointer", display: "flex", alignItems: "center",
+            justifyContent: "space-between", fontFamily: "inherit",
+          }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+              <span style={{ fontSize: 11, fontWeight: 700, color: "#6B7280" }}>👥 {matchBets.length}ベット</span>
+              <span style={{ fontSize: 11, color: "#9CA3AF", fontFamily: "'DM Mono', monospace" }}>⚽{totalAmt.toLocaleString()}</span>
+              {sides.map(side => pcts[side] > 0 ? (
+                <span key={side} style={{ fontSize: 9, padding: "2px 6px", borderRadius: 4, fontWeight: 700, background: sideColors[side].bg, color: sideColors[side].color }}>
+                  {sideName(side)} {pcts[side]}%
+                </span>
+              ) : null)}
+            </div>
+            <span style={{ fontSize: 10, color: "#D1D5DB", display: "inline-block", transform: showBets ? "rotate(180deg)" : "none", transition: "transform 0.2s" }}>▼</span>
+          </button>
+
+          {showBets && (
+            <div style={{ marginTop: 6, borderRadius: 10, border: "1px solid #F3F4F6", overflow: "hidden" }}>
+              {/* Table header */}
+              <div style={{ display: "flex", padding: "7px 12px", background: "#F9FAFB", borderBottom: "1px solid #F3F4F6" }}>
+                <div style={{ flex: 1, fontSize: 9, color: "#9CA3AF", fontWeight: 700 }}>名前</div>
+                <div style={{ width: 64, fontSize: 9, color: "#9CA3AF", fontWeight: 700, textAlign: "center" }}>予想</div>
+                <div style={{ width: 56, fontSize: 9, color: "#9CA3AF", fontWeight: 700, textAlign: "right" }}>ベット</div>
+                <div style={{ width: 68, fontSize: 9, color: "#9CA3AF", fontWeight: 700, textAlign: "right" }}>的中時払戻</div>
+              </div>
+              {/* Bet rows */}
+              {betList.map((b, i) => (
+                <div key={i} style={{ display: "flex", alignItems: "center", padding: "9px 12px", borderBottom: i < betList.length - 1 ? "1px solid #F9FAFB" : "none", background: "#fff" }}>
+                  <div style={{ flex: 1, fontSize: 12, fontWeight: 700, color: "#1F2937", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{b.name}</div>
+                  <div style={{ width: 64, textAlign: "center" }}>
+                    <span style={{ fontSize: 10, padding: "2px 6px", borderRadius: 6, fontWeight: 700, background: sideColors[b.side]?.bg || "#F3F4F6", color: sideColors[b.side]?.color || "#6B7280" }}>
+                      {sideName(b.side)}
+                    </span>
+                  </div>
+                  <div style={{ width: 56, fontSize: 11, fontWeight: 700, color: "#4F46E5", textAlign: "right", fontFamily: "'DM Mono', monospace" }}>
+                    ⚽{b.amount.toLocaleString()}
+                  </div>
+                  <div style={{ width: 68, textAlign: "right" }}>
+                    <div style={{ fontSize: 11, fontWeight: 800, color: "#16A34A", fontFamily: "'DM Mono', monospace" }}>⚽{b.payout.toLocaleString()}</div>
+                    <div style={{ fontSize: 9, color: b.profit >= 0 ? "#16A34A" : "#DC2626", fontFamily: "'DM Mono', monospace" }}>{b.profit >= 0 ? "+" : ""}{b.profit.toLocaleString()}</div>
+                  </div>
+                </div>
+              ))}
+              {/* Odds footer */}
+              <div style={{ display: "flex", gap: 6, padding: "8px 12px", background: "#F9FAFB", borderTop: "1px solid #F3F4F6" }}>
+                {sides.map(side => totals[side] > 0 ? (
+                  <div key={side} style={{ flex: 1, textAlign: "center", padding: "6px 4px", borderRadius: 8, background: "#fff", border: "1px solid #F3F4F6" }}>
+                    <div style={{ fontSize: 9, color: "#9CA3AF", marginBottom: 2 }}>{sideName(side)}</div>
+                    <div style={{ fontSize: 12, fontWeight: 800, color: "#4F46E5", fontFamily: "'DM Mono', monospace" }}>×{matchOdds[side]}</div>
+                    <div style={{ fontSize: 9, color: "#6B7280", fontFamily: "'DM Mono', monospace" }}>⚽{totals[side].toLocaleString()}</div>
+                  </div>
+                ) : null)}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* BetForm */}
       {thisMatchSelected && !isLocked && (
         <div style={{ marginTop: 12 }}>
           <BetForm label={`⚽ 「${betLabel(pick.side)}」にベット`} onSubmit={onBet} disabled={false} sportEmoji="⚽" />
