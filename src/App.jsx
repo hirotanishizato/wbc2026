@@ -974,6 +974,7 @@ export default function App() {
   const [matches, setMatches] = useState([]);
   const [matchPick, setMatchPick] = useState(null);
   const [isAdmin] = useState(() => new URLSearchParams(window.location.search).has("admin"));
+  const [matchTab, setMatchTab] = useState("open"); // "open" or "closed"
 
   const loadData = useCallback(async (retry = 0) => {
     try {
@@ -1097,22 +1098,42 @@ export default function App() {
         <SettledPortfolio bets={rawBets} matches={matches} />
         <ActivePortfolio bets={rawBets} matches={matches} />
 
-        {matches.length === 0 && <div style={{ textAlign: "center", padding: 40, color: "#9CA3AF" }}>読み込み中...</div>}
-        {stageOrder.map(stage => {
-          const sm = groupedMatches[stage];
-          if (!sm || sm.length === 0) return null;
-          const icons = { group: "🏟️", r32: "⚡", qf: "🔥", sf: "💥", final: "🏆" };
+        {/* Match Tabs */}
+        {(() => {
+          const now = new Date();
+          const groupMatches = matches.filter(m => m.stage === "group");
+          const openMatches = groupMatches.filter(m => !m.result && !(m.match_date && now > new Date(m.match_date)));
+          const closedMatches = groupMatches.filter(m => m.result || (m.match_date && now > new Date(m.match_date)));
+          const filtered = matchTab === "open" ? openMatches : closedMatches;
           return (
-            <div key={stage} style={{ marginBottom: 8 }}>
-              <div style={{ fontSize: 13, fontWeight: 800, color: "#6B7280", marginBottom: 10, padding: "0 2px" }}>
-                {icons[stage]} {STAGE_LABELS[stage]}
+            <>
+              <div style={{ display: "flex", gap: 0, marginBottom: 14, borderRadius: 12, overflow: "hidden", border: "1px solid #E5E7EB" }}>
+                {[
+                  { key: "open", label: "受付中", count: openMatches.length },
+                  { key: "closed", label: "受付終了", count: closedMatches.length },
+                ].map(tab => (
+                  <button key={tab.key} onClick={() => setMatchTab(tab.key)} style={{
+                    flex: 1, padding: "10px 8px", border: "none", cursor: "pointer", fontFamily: "inherit",
+                    fontSize: 13, fontWeight: 700,
+                    background: matchTab === tab.key ? "#4F46E5" : "#fff",
+                    color: matchTab === tab.key ? "#fff" : "#6B7280",
+                    transition: "all 0.15s",
+                  }}>
+                    {tab.label} <span style={{ fontSize: 10, opacity: 0.7 }}>({tab.count})</span>
+                  </button>
+                ))}
               </div>
-              {sm.map(match => (
+              {filtered.length === 0 && (
+                <div style={{ textAlign: "center", padding: 30, color: "#9CA3AF", fontSize: 13 }}>
+                  {matchTab === "open" ? "受付中の試合はありません" : "受付終了した試合はありません"}
+                </div>
+              )}
+              {filtered.map(match => (
                 <MatchCard key={match.id} match={match} bets={rawBets} pick={matchPick} onPick={handleMatchPick} onBet={handleMatchBet} isAdmin={isAdmin} onSetResult={handleSetResult} onClearResult={handleClearResult} onDeleteBet={handleDeleteBet} onEditBet={handleEditBet} />
               ))}
-            </div>
+            </>
           );
-        })}
+        })()}
       </div>
 
       {/* ─── Footer ─── */}
