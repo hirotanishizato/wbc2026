@@ -37,6 +37,24 @@ const TABS = [
 
 const POOL_COLORS = { A: "#6366F1", B: "#F43F5E", C: "#0EA5E9", D: "#F59E0B" };
 
+const STAGE_LABELS = {
+  group: "グループステージ",
+  r32: "ラウンド32",
+  qf: "準々決勝",
+  sf: "準決勝",
+  final: "決勝",
+};
+
+const SOCCER_FLAGS = {
+  "日本": "🇯🇵", "オランダ": "🇳🇱", "チュニジア": "🇹🇳", "スウェーデン": "🇸🇪",
+  "ブラジル": "🇧🇷", "モロッコ": "🇲🇦", "スペイン": "🇪🇸", "ウルグアイ": "🇺🇾",
+  "フランス": "🇫🇷", "セネガル": "🇸🇳", "アルゼンチン": "🇦🇷", "オーストリア": "🇦🇹",
+  "ポルトガル": "🇵🇹", "コロンビア": "🇨🇴", "イングランド": "🏴󠁧󠁢󠁥󠁮󠁧󠁿", "クロアチア": "🇭🇷",
+  "ドイツ": "🇩🇪", "コートジボワール": "🇨🇮",
+};
+
+function getFlag(name) { return SOCCER_FLAGS[name] || "🏳️"; }
+
 function getSavedNickname() { try { return localStorage.getItem(LS_KEY) || ""; } catch { return ""; } }
 function saveNickname(name) { try { localStorage.setItem(LS_KEY, name); } catch {} }
 
@@ -49,9 +67,9 @@ function useCountdown() {
   const [now, setNow] = useState(new Date());
   useEffect(() => { const t = setInterval(() => setNow(new Date()), 1000); return () => clearInterval(t); }, []);
   const diff = DEADLINE - now;
-  if (diff <= 0) return { expired: true, days: 0, hours: 0, minutes: 0, seconds: 0, text: "締切済み" };
+  if (diff <= 0) return { expired: true, days: 0, hours: 0, minutes: 0, seconds: 0 };
   const d = Math.floor(diff / 864e5), h = Math.floor((diff / 36e5) % 24), m = Math.floor((diff / 6e4) % 60), s = Math.floor((diff / 1e3) % 60);
-  return { expired: false, days: d, hours: h, minutes: m, seconds: s, text: d > 0 ? `あと${d}日${h}時間` : `あと${h}時間${m}分` };
+  return { expired: false, days: d, hours: h, minutes: m, seconds: s };
 }
 
 function aggregateBets(bets) {
@@ -87,9 +105,7 @@ function calcPersonalStats(bets, winnerData) {
     u.totalBet += b.amount;
     const team = TEAMS.find((t) => t.name === b.team_side);
     const pickLabel = `${team?.flag || ""} ${b.team_side}`;
-    if (!u.teamMap[b.team_side]) {
-      u.teamMap[b.team_side] = { pick: pickLabel, teamName: b.team_side, amount: 0, betCount: 0, times: [] };
-    }
+    if (!u.teamMap[b.team_side]) u.teamMap[b.team_side] = { pick: pickLabel, teamName: b.team_side, amount: 0, betCount: 0, times: [] };
     u.teamMap[b.team_side].amount += b.amount;
     u.teamMap[b.team_side].betCount += 1;
     u.teamMap[b.team_side].times.push(b.created_at);
@@ -230,8 +246,7 @@ function TeamButton({ team, selected, onClick, odds, disabled }) {
   return (
     <button onClick={() => !disabled && onClick(team.name)} style={{
       display: "flex", alignItems: "center", gap: 12, width: "100%", padding: "14px 16px", borderRadius: 16,
-      background: isSelected ? "#EEF2FF" : "#fff",
-      border: isSelected ? "2px solid #6366F1" : "1px solid #F3F4F6",
+      background: isSelected ? "#EEF2FF" : "#fff", border: isSelected ? "2px solid #6366F1" : "1px solid #F3F4F6",
       cursor: disabled ? "default" : "pointer", transition: "all 0.15s ease", textAlign: "left",
       boxShadow: isSelected ? "0 4px 16px rgba(99,102,241,0.12)" : "0 1px 3px rgba(0,0,0,0.04)", boxSizing: "border-box", opacity: disabled ? 0.5 : 1,
     }}>
@@ -254,7 +269,7 @@ function TeamButton({ team, selected, onClick, odds, disabled }) {
 }
 
 /* ─── BetForm ─── */
-function BetForm({ onSubmit, label, disabled }) {
+function BetForm({ onSubmit, label, disabled, sportEmoji = "⚾" }) {
   const [name, setName] = useState(() => getSavedNickname());
   const [amount, setAmount] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -286,7 +301,7 @@ function BetForm({ onSubmit, label, disabled }) {
           color: valid ? "#fff" : "#9CA3AF", transition: "all 0.2s", fontFamily: "inherit",
           boxShadow: valid ? "0 4px 14px rgba(99,102,241,0.3)" : "none",
         }}>
-        {submitting ? "送信中..." : "ベットする ⚾"}
+        {submitting ? "送信中..." : `ベットする ${sportEmoji}`}
       </button>
     </div>
   );
@@ -326,7 +341,7 @@ function RankingBar({ items }) {
   );
 }
 
-/* ─── Prediction Card (Home) ─── */
+/* ─── Prediction Card ─── */
 function PredictionCard({ title, category, bannerStyle, topPicks, participants, deadline, topResult, onClick }) {
   return (
     <div className="card" style={{ padding: 0, overflow: "hidden", cursor: onClick ? "pointer" : "default", marginBottom: 14 }} onClick={onClick}>
@@ -346,17 +361,13 @@ function PredictionCard({ title, category, bannerStyle, topPicks, participants, 
         {topPicks && topPicks.length > 0 && (
           <div style={{ display: "flex", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
             {topPicks.map((pick, i) => (
-              <span key={i} style={{
-                padding: "6px 16px", borderRadius: 20, fontSize: 13, fontWeight: 700,
-                background: pick.bg || "#F3F4F6", color: pick.color || "#4B5563",
-                border: `1px solid ${pick.borderColor || "#E5E7EB"}`,
-              }}>{pick.label}</span>
+              <span key={i} style={{ padding: "6px 16px", borderRadius: 20, fontSize: 13, fontWeight: 700, background: pick.bg || "#F3F4F6", color: pick.color || "#4B5563", border: `1px solid ${pick.borderColor || "#E5E7EB"}` }}>{pick.label}</span>
             ))}
           </div>
         )}
         <div style={{ display: "flex", alignItems: "center", gap: 14, fontSize: 12, color: "#9CA3AF" }}>
-          <span style={{ display: "flex", alignItems: "center", gap: 4 }}>👥 {participants}</span>
-          <span style={{ display: "flex", alignItems: "center", gap: 4 }}>⏰ {deadline}</span>
+          <span>👥 {participants}</span>
+          <span>⏰ {deadline}</span>
           <span style={{ marginLeft: "auto", fontSize: 11, fontWeight: 700, color: "#4F46E5", background: "#EEF2FF", padding: "2px 10px", borderRadius: 20 }}>{category}</span>
         </div>
       </div>
@@ -367,35 +378,103 @@ function PredictionCard({ title, category, bannerStyle, topPicks, participants, 
 /* ─── Coming Soon ─── */
 function ComingSoon({ category }) {
   const configs = {
-    soccer: { icon: "⚽", title: "サッカー", desc: "Jリーグ・海外リーグの予想", bg: "linear-gradient(135deg, #16A34A, #059669)", items: ["プレミアリーグ優勝予想", "W杯 アジア最終予選", "Jリーグ 順位予想"] },
     boxing: { icon: "🥊", title: "ボクシング", desc: "世界タイトル戦の勝敗予想", bg: "linear-gradient(135deg, #DC2626, #991B1B)", items: ["井上尚弥 次戦予想", "PFP ランキング予想", "階級別チャンピオン予想"] },
     mahjong: { icon: "🀄", title: "麻雀", desc: "Mリーグ・タイトル戦の予想", bg: "linear-gradient(135deg, #7C3AED, #5B21B6)", items: ["Mリーグ優勝予想", "最高位戦 予想", "最強位決定戦 予想"] },
   };
   const c = configs[category] || { icon: "🎯", title: category, desc: "", bg: "#6B7280", items: [] };
   return (
-    <div style={{ padding: "0" }}>
-      <div className="card" style={{ padding: 0, overflow: "hidden" }}>
-        <div style={{ height: 140, background: c.bg, display: "flex", alignItems: "center", justifyContent: "center", position: "relative" }}>
-          <span style={{ fontSize: 60, opacity: 0.3 }}>{c.icon}</span>
-          <div style={{ position: "absolute", bottom: 16, left: 16 }}>
-            <div style={{ fontSize: 20, fontWeight: 900, color: "#fff" }}>{c.title}</div>
-            <div style={{ fontSize: 12, color: "rgba(255,255,255,0.7)", marginTop: 2 }}>{c.desc}</div>
-          </div>
-        </div>
-        <div style={{ padding: 16 }}>
-          <div style={{ fontSize: 14, fontWeight: 700, color: "#9CA3AF", textAlign: "center", marginBottom: 16 }}>🚧 準備中</div>
-          {c.items.map((item, i) => (
-            <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 0", borderBottom: i < c.items.length - 1 ? "1px solid #F3F4F6" : "none" }}>
-              <span style={{ fontSize: 20, opacity: 0.4 }}>{c.icon}</span>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 14, fontWeight: 600, color: "#D1D5DB" }}>{item}</div>
-                <div style={{ fontSize: 11, color: "#E5E7EB", marginTop: 2 }}>近日公開</div>
-              </div>
-              <span style={{ fontSize: 11, color: "#E5E7EB", background: "#F9FAFB", padding: "4px 12px", borderRadius: 20 }}>SOON</span>
-            </div>
-          ))}
+    <div className="card" style={{ padding: 0, overflow: "hidden" }}>
+      <div style={{ height: 140, background: c.bg, display: "flex", alignItems: "center", justifyContent: "center", position: "relative" }}>
+        <span style={{ fontSize: 60, opacity: 0.3 }}>{c.icon}</span>
+        <div style={{ position: "absolute", bottom: 16, left: 16 }}>
+          <div style={{ fontSize: 20, fontWeight: 900, color: "#fff" }}>{c.title}</div>
+          <div style={{ fontSize: 12, color: "rgba(255,255,255,0.7)", marginTop: 2 }}>{c.desc}</div>
         </div>
       </div>
+      <div style={{ padding: 16 }}>
+        <div style={{ fontSize: 14, fontWeight: 700, color: "#9CA3AF", textAlign: "center", marginBottom: 16 }}>🚧 準備中</div>
+        {c.items.map((item, i) => (
+          <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 0", borderBottom: i < c.items.length - 1 ? "1px solid #F3F4F6" : "none" }}>
+            <span style={{ fontSize: 20, opacity: 0.4 }}>{c.icon}</span>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 14, fontWeight: 600, color: "#D1D5DB" }}>{item}</div>
+              <div style={{ fontSize: 11, color: "#E5E7EB", marginTop: 2 }}>近日公開</div>
+            </div>
+            <span style={{ fontSize: 11, color: "#E5E7EB", background: "#F9FAFB", padding: "4px 12px", borderRadius: 20 }}>SOON</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ─── MatchCard ─── */
+function MatchCard({ match, bets, pick, onPick, onBet }) {
+  const isPast = match.match_date ? new Date() > new Date(match.match_date) : false;
+  const isLocked = isPast || match.result != null;
+  const matchBets = bets.filter(b => b.match_id === match.id);
+  const totals = { home_win: 0, draw: 0, away_win: 0 };
+  matchBets.forEach(b => { if (totals[b.team_side] !== undefined) totals[b.team_side] += b.amount; });
+  const totalAmt = Object.values(totals).reduce((s, v) => s + v, 0);
+  const pcts = {};
+  ["home_win", "draw", "away_win"].forEach(k => { pcts[k] = totalAmt > 0 ? Math.round(totals[k] / totalAmt * 100) : 0; });
+  const isSelected = (side) => pick?.matchId === match.id && pick?.side === side;
+  const thisMatchSelected = pick?.matchId === match.id;
+  const dateStr = match.match_date
+    ? new Date(match.match_date).toLocaleDateString("ja-JP", { month: "numeric", day: "numeric", weekday: "short" })
+    : "日程TBD";
+  const sides = ["home_win", ...(match.has_draw ? ["draw"] : []), "away_win"];
+  const sideLabel = (side) => {
+    if (side === "draw") return "引き分け";
+    const n = side === "home_win" ? match.home_team : match.away_team;
+    return n.length > 5 ? (side === "home_win" ? "ホーム勝" : "アウェイ勝") : `${n}勝`;
+  };
+  const betLabel = (side) => side === "draw" ? "引き分け" : side === "home_win" ? `${match.home_team}勝ち` : `${match.away_team}勝ち`;
+
+  return (
+    <div className="card" style={{ marginBottom: 10, border: thisMatchSelected ? "2px solid #4F46E5" : "1px solid #F3F4F6", transition: "border 0.15s" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+        <span style={{ fontSize: 10, fontWeight: 700, color: "#16A34A", background: "#F0FDF4", padding: "2px 8px", borderRadius: 10 }}>
+          {STAGE_LABELS[match.stage] || match.stage}{match.group_name ? ` G${match.group_name}` : ""}
+        </span>
+        <span style={{ fontSize: 10, color: "#9CA3AF", fontFamily: "'DM Mono', monospace" }}>{dateStr}</span>
+      </div>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
+        <div style={{ flex: 1, textAlign: "center" }}>
+          <div style={{ fontSize: 26 }}>{getFlag(match.home_team)}</div>
+          <div style={{ fontSize: 12, fontWeight: 700, color: "#1F2937", marginTop: 4, lineHeight: 1.3 }}>{match.home_team}</div>
+        </div>
+        <div style={{ fontSize: 13, fontWeight: 800, color: "#D1D5DB", flexShrink: 0 }}>VS</div>
+        <div style={{ flex: 1, textAlign: "center" }}>
+          <div style={{ fontSize: 26 }}>{getFlag(match.away_team)}</div>
+          <div style={{ fontSize: 12, fontWeight: 700, color: "#1F2937", marginTop: 4, lineHeight: 1.3 }}>{match.away_team}</div>
+        </div>
+      </div>
+      {!isLocked && (
+        <div style={{ display: "flex", gap: 6 }}>
+          {sides.map(side => (
+            <button key={side} onClick={() => onPick(match.id, side)} style={{
+              flex: 1, padding: "10px 4px", borderRadius: 12, fontSize: 11, fontWeight: 700, cursor: "pointer",
+              border: `2px solid ${isSelected(side) ? "#4F46E5" : "#E5E7EB"}`,
+              background: isSelected(side) ? "#EEF2FF" : "#F9FAFB",
+              color: isSelected(side) ? "#4F46E5" : "#6B7280", transition: "all 0.15s",
+            }}>
+              {sideLabel(side)}
+              {pcts[side] > 0 && <div style={{ fontSize: 9, color: "#9CA3AF", marginTop: 2 }}>{pcts[side]}%</div>}
+            </button>
+          ))}
+        </div>
+      )}
+      {isLocked && (
+        <div style={{ textAlign: "center", fontSize: 11, color: "#9CA3AF", padding: "6px 0", background: "#F9FAFB", borderRadius: 8 }}>
+          {match.result ? "✅ 結果確定済み" : "🔒 受付終了"}
+        </div>
+      )}
+      {thisMatchSelected && !isLocked && (
+        <div style={{ marginTop: 12 }}>
+          <BetForm label={`⚽ 「${betLabel(pick.side)}」にベット`} onSubmit={onBet} disabled={false} sportEmoji="⚽" />
+        </div>
+      )}
     </div>
   );
 }
@@ -413,6 +492,8 @@ export default function App() {
   const [showHistory, setShowHistory] = useState(false);
   const [showStats, setShowStats] = useState(false);
   const countdown = useCountdown();
+  const [matches, setMatches] = useState([]);
+  const [matchPick, setMatchPick] = useState(null);
 
   const loadData = useCallback(async (retry = 0) => {
     try {
@@ -432,7 +513,13 @@ export default function App() {
     setLoading(false);
   }, []);
 
-  useEffect(() => { loadData(); }, [loadData]);
+  const loadMatches = useCallback(async () => {
+    const { data } = await supabase.from("matches").select("*").eq("is_featured", true).order("match_date");
+    if (data) setMatches(data);
+  }, []);
+
+  useEffect(() => { loadData(); loadMatches(); }, [loadData, loadMatches]);
+
   useEffect(() => {
     const ch = supabase.channel("bets-realtime").on("postgres_changes", { event: "INSERT", schema: "public", table: "bets" }, () => { loadData(); }).subscribe();
     return () => { supabase.removeChannel(ch); };
@@ -446,22 +533,32 @@ export default function App() {
     if (!error) { setWinnerPick(null); showToast("ベット完了！"); loadData(); }
   };
 
+  const handleMatchPick = (matchId, side) => {
+    if (matchPick?.matchId === matchId && matchPick?.side === side) setMatchPick(null);
+    else setMatchPick({ matchId, side });
+  };
+
+  const handleMatchBet = async (name, amount) => {
+    if (!matchPick) return;
+    const { error } = await supabase.from("bets").insert({ match_id: matchPick.matchId, team_side: matchPick.side, user_name: name, amount });
+    if (!error) { setMatchPick(null); showToast("ベット完了！⚽"); loadData(); }
+  };
+
   const winnerOdds = calcOdds(winnerData, TEAMS.map((t) => t.name));
   const winnerRanking = TEAMS.map((t) => ({ label: t.name, flag: t.flag, ...(winnerOdds[t.name] || { count: 0, total: 0, odds: "-", pct: 0 }) }));
-
   let totalBets = 0, totalAmount = 0;
   Object.values(winnerData).forEach((d) => { totalBets += d.count; totalAmount += d.total; });
-
   const sorted = [...winnerRanking].sort((a, b) => b.pct - a.pct).filter(x => x.pct > 0);
   const topPicks = sorted.slice(0, 3).map((item, i) => {
-    const colors = [
-      { bg: "#FEE2E2", color: "#DC2626", borderColor: "#FECACA" },
-      { bg: "#DBEAFE", color: "#2563EB", borderColor: "#BFDBFE" },
-      { bg: "#FEF3C7", color: "#D97706", borderColor: "#FDE68A" },
-    ];
+    const colors = [{ bg: "#FEE2E2", color: "#DC2626", borderColor: "#FECACA" }, { bg: "#DBEAFE", color: "#2563EB", borderColor: "#BFDBFE" }, { bg: "#FEF3C7", color: "#D97706", borderColor: "#FDE68A" }];
     return { label: `${item.flag} ${item.label}`, ...colors[i] };
   });
   const topResult = sorted.length > 0 ? { pct: sorted[0].pct, label: sorted[0].label } : null;
+
+  const soccerBets = rawBets.filter(b => b.match_id !== "winner");
+  const stageOrder = ["group", "r32", "qf", "sf", "final"];
+  const groupedMatches = {};
+  matches.forEach(m => { if (!groupedMatches[m.stage]) groupedMatches[m.stage] = []; groupedMatches[m.stage].push(m); });
 
   const openWbc = () => { setPage("wbc-detail"); setTab("wbc"); };
   const goHome = () => { setPage("home"); setWinnerPick(null); };
@@ -486,7 +583,7 @@ export default function App() {
         .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.4); backdrop-filter: blur(4px); z-index: 10000; display: flex; justify-content: center; align-items: flex-start; padding: 40px 12px; overflow-y: auto; }
         .modal-content { width: 100%; max-width: 460px; background: #fff; border-radius: 20px; padding: 20px 16px; box-shadow: 0 20px 60px rgba(0,0,0,0.15); animation: slideUp 0.25s ease; }
         .close-btn { background: #F3F4F6; border: none; color: #9CA3AF; font-size: 16px; width: 34px; height: 34px; border-radius: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
-        .tab-scroll { display: flex; gap: 0; overflow-x: auto; -webkit-overflow-scrolling: touch; scroll-snap-type: x mandatory; padding: 0 16px; }
+        .tab-scroll { display: flex; gap: 0; overflow-x: auto; -webkit-overflow-scrolling: touch; padding: 0 16px; }
         .tab-scroll::-webkit-scrollbar { display: none; }
         @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
@@ -508,15 +605,12 @@ export default function App() {
         {page === "home" && (
           <div className="tab-scroll">
             {TABS.map((t) => (
-              <button key={t.key} onClick={() => setTab(t.key)}
-                style={{
-                  padding: "10px 18px", background: "none", border: "none", cursor: "pointer", fontSize: 14,
-                  fontWeight: tab === t.key ? 800 : 500, color: tab === t.key ? "#4F46E5" : "#9CA3AF",
-                  borderBottom: tab === t.key ? "3px solid #4F46E5" : "3px solid transparent",
-                  transition: "all 0.15s", whiteSpace: "nowrap", flexShrink: 0, fontFamily: "inherit",
-                }}>
-                {t.label}
-              </button>
+              <button key={t.key} onClick={() => setTab(t.key)} style={{
+                padding: "10px 18px", background: "none", border: "none", cursor: "pointer", fontSize: 14,
+                fontWeight: tab === t.key ? 800 : 500, color: tab === t.key ? "#4F46E5" : "#9CA3AF",
+                borderBottom: tab === t.key ? "3px solid #4F46E5" : "3px solid transparent",
+                transition: "all 0.15s", whiteSpace: "nowrap", flexShrink: 0, fontFamily: "inherit",
+              }}>{t.label}</button>
             ))}
           </div>
         )}
@@ -525,44 +619,88 @@ export default function App() {
       {/* ─── HOME ─── */}
       {page === "home" && (
         <div style={{ padding: "14px 12px 40px", animation: "fadeIn 0.2s ease" }}>
-          {(tab === "top" || tab === "wbc") && (
+
+          {/* TOP タブ */}
+          {tab === "top" && (
             <>
               <PredictionCard
-                title="WBC 2026 優勝国は？"
-                category="⚾ WBC"
-                bannerStyle={{
-                  background: "url('/images/banner-wbc.jpg') center center / cover no-repeat",
-                }}
-                topPicks={topPicks}
-                participants={totalBets}
-                deadline={countdown.expired ? "締切済み" : "03/05 (水)"}
-                topResult={topResult}
-                onClick={openWbc}
+                title="WBC 2026 優勝国は？" category="⚾ WBC"
+                bannerStyle={{ background: "url('/images/banner-wbc.jpg') center center / cover no-repeat" }}
+                topPicks={topPicks} participants={totalBets}
+                deadline={countdown.expired ? "締切済み" : "03/05 (水)"} topResult={topResult} onClick={openWbc}
               />
-              {tab === "top" && (
-                <div style={{ marginTop: 12, marginBottom: 8 }}>
-                  <div style={{ fontSize: 14, fontWeight: 800, color: "#1F2937", marginBottom: 12, padding: "0 4px" }}>🔜 近日公開</div>
-                  {[
-                    { icon: "⚽", title: "25/26 プレミアリーグ優勝クラブは？", cat: "サッカー", bg: "#F0FDF4", catColor: "#16A34A" },
-                    { icon: "🥊", title: "井上尚弥 vs TBA 勝敗予想", cat: "ボクシング", bg: "#FEF2F2", catColor: "#DC2626" },
-                    { icon: "🀄", title: "Mリーグ 2025-26 優勝チーム", cat: "麻雀", bg: "#F5F3FF", catColor: "#7C3AED" },
-                  ].map((item, i) => (
-                    <div key={i} className="card" style={{ display: "flex", alignItems: "center", gap: 14, padding: "14px 16px", opacity: 0.6 }}>
-                      <div style={{ width: 48, height: 48, borderRadius: 12, background: item.bg, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24, flexShrink: 0 }}>{item.icon}</div>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: 13, fontWeight: 700, color: "#374151", marginBottom: 3 }}>{item.title}</div>
-                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                          <span style={{ fontSize: 10, fontWeight: 700, color: item.catColor, background: `${item.catColor}12`, padding: "2px 8px", borderRadius: 10 }}>{item.cat}</span>
-                          <span style={{ fontSize: 10, color: "#D1D5DB" }}>近日公開</span>
-                        </div>
+              <PredictionCard
+                title="FIFA ワールドカップ 2026 試合予想" category="⚽ サッカー"
+                bannerStyle={{ background: "linear-gradient(135deg, #14532D 0%, #16A34A 50%, #15803D 100%)" }}
+                topPicks={[
+                  { label: "🇯🇵 日本 vs 🇳🇱 オランダ", bg: "#F0FDF4", color: "#16A34A", borderColor: "#BBF7D0" },
+                  { label: "🇧🇷 ブラジル vs 🇲🇦 モロッコ", bg: "#FFFBEB", color: "#D97706", borderColor: "#FDE68A" },
+                ]}
+                participants={soccerBets.length} deadline="6/15 開幕" topResult={null}
+                onClick={() => setTab("soccer")}
+              />
+              <div style={{ marginTop: 4, marginBottom: 8 }}>
+                <div style={{ fontSize: 14, fontWeight: 800, color: "#1F2937", marginBottom: 12, padding: "0 4px" }}>🔜 近日公開</div>
+                {[
+                  { icon: "🥊", title: "井上尚弥 vs TBA 勝敗予想", cat: "ボクシング", bg: "#FEF2F2", catColor: "#DC2626" },
+                  { icon: "🀄", title: "Mリーグ 2025-26 優勝チーム", cat: "麻雀", bg: "#F5F3FF", catColor: "#7C3AED" },
+                ].map((item, i) => (
+                  <div key={i} className="card" style={{ display: "flex", alignItems: "center", gap: 14, padding: "14px 16px", opacity: 0.6 }}>
+                    <div style={{ width: 48, height: 48, borderRadius: 12, background: item.bg, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24, flexShrink: 0 }}>{item.icon}</div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: "#374151", marginBottom: 3 }}>{item.title}</div>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <span style={{ fontSize: 10, fontWeight: 700, color: item.catColor, background: `${item.catColor}12`, padding: "2px 8px", borderRadius: 10 }}>{item.cat}</span>
+                        <span style={{ fontSize: 10, color: "#D1D5DB" }}>近日公開</span>
                       </div>
                     </div>
-                  ))}
-                </div>
-              )}
+                  </div>
+                ))}
+              </div>
             </>
           )}
-          {tab === "soccer" && <ComingSoon category="soccer" />}
+
+          {/* WBC タブ */}
+          {tab === "wbc" && (
+            <PredictionCard
+              title="WBC 2026 優勝国は？" category="⚾ WBC"
+              bannerStyle={{ background: "url('/images/banner-wbc.jpg') center center / cover no-repeat" }}
+              topPicks={topPicks} participants={totalBets}
+              deadline={countdown.expired ? "締切済み" : "03/05 (水)"} topResult={topResult} onClick={openWbc}
+            />
+          )}
+
+          {/* サッカー タブ */}
+          {tab === "soccer" && (
+            <div style={{ animation: "fadeIn 0.2s ease" }}>
+              <div className="card" style={{ background: "linear-gradient(135deg, #14532D, #16A34A)", padding: "20px 16px", marginBottom: 14 }}>
+                <div style={{ fontSize: 11, color: "rgba(255,255,255,0.7)", fontWeight: 600, marginBottom: 4 }}>試合予想シミュレーション</div>
+                <div style={{ fontSize: 22, fontWeight: 900, color: "#fff" }}>⚽ FIFA W杯 2026</div>
+                <div style={{ fontSize: 12, color: "rgba(255,255,255,0.75)", marginTop: 6 }}>試合ごとに勝敗を予想してベット！<br />グループ戦は引き分けあり・決勝Tはなし</div>
+                <div style={{ marginTop: 12, display: "flex", gap: 14, fontSize: 11, color: "rgba(255,255,255,0.8)" }}>
+                  <span>👥 {soccerBets.length}ベット</span>
+                  <span>📅 6/15 開幕</span>
+                </div>
+              </div>
+              {matches.length === 0 && <div style={{ textAlign: "center", padding: 40, color: "#9CA3AF" }}>読み込み中...</div>}
+              {stageOrder.map(stage => {
+                const sm = groupedMatches[stage];
+                if (!sm || sm.length === 0) return null;
+                const icons = { group: "🏟️", r32: "⚡", qf: "🔥", sf: "💥", final: "🏆" };
+                return (
+                  <div key={stage} style={{ marginBottom: 8 }}>
+                    <div style={{ fontSize: 13, fontWeight: 800, color: "#6B7280", marginBottom: 10, padding: "0 2px" }}>
+                      {icons[stage]} {STAGE_LABELS[stage]}
+                    </div>
+                    {sm.map(match => (
+                      <MatchCard key={match.id} match={match} bets={rawBets} pick={matchPick} onPick={handleMatchPick} onBet={handleMatchBet} />
+                    ))}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
           {tab === "boxing" && <ComingSoon category="boxing" />}
           {tab === "mahjong" && <ComingSoon category="mahjong" />}
         </div>
@@ -589,7 +727,6 @@ export default function App() {
               </div>
             </div>
           )}
-
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 12 }}>
             <div className="card" style={{ textAlign: "center", marginBottom: 0 }}>
               <div style={{ fontSize: 11, color: "#9CA3AF", marginBottom: 4 }}>参加数</div>
@@ -600,7 +737,6 @@ export default function App() {
               <div style={{ fontSize: 22, fontWeight: 800, color: "#4F46E5", fontFamily: "'DM Mono', monospace" }}>🎱{totalAmount.toLocaleString()}</div>
             </div>
           </div>
-
           {recentBets.length > 0 && (
             <div className="card">
               <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 10 }}>
@@ -622,7 +758,6 @@ export default function App() {
               ))}
             </div>
           )}
-
           <div style={{ display: "flex", gap: 10, marginBottom: 14 }}>
             <button onClick={() => setShowHistory(true)} style={{ flex: 1, padding: "14px 10px", borderRadius: 16, cursor: "pointer", textAlign: "center", background: "#fff", border: "1px solid #F3F4F6", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
               <div style={{ fontSize: 20, marginBottom: 4 }}>📋</div>
@@ -633,18 +768,15 @@ export default function App() {
               <div style={{ fontSize: 12, fontWeight: 800, color: "#1F2937" }}>個人別成績</div>
             </button>
           </div>
-
           {winnerPick && !countdown.expired && (
             <BetForm label={`🏆 「${TEAMS.find((t) => t.name === winnerPick)?.flag} ${winnerPick}」にベット`} onSubmit={handleWinnerBet} disabled={!winnerPick} />
           )}
-
           {winnerRanking.some((x) => x.pct > 0) && (
             <div className="card">
               <div style={{ fontSize: 14, fontWeight: 800, color: "#1F2937", marginBottom: 2 }}>📊 オッズランキング</div>
               <RankingBar items={winnerRanking} />
             </div>
           )}
-
           <div style={{ marginBottom: 8 }}>
             <div style={{ fontSize: 14, fontWeight: 700, color: "#6B7280", marginBottom: 12, padding: "0 2px" }}>
               {countdown.expired ? "🔒 投票は締め切りました" : winnerPick ? "💡 他のチームに変更もできます" : "🏆 優勝チームを選んでください"}
@@ -659,8 +791,7 @@ export default function App() {
       {/* ─── Footer ─── */}
       <div style={{ padding: "20px 16px 40px", textAlign: "center" }}>
         <div style={{ fontSize: 11, color: "#D1D5DB", lineHeight: 1.8 }}>
-          BillPre — スポーツ予想シミュレーション<br />
-          実際の金銭のやり取りは一切ありません
+          BillPre — スポーツ予想シミュレーション<br />実際の金銭のやり取りは一切ありません
         </div>
       </div>
 
