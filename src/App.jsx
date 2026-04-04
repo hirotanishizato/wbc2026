@@ -1087,13 +1087,23 @@ export default function App() {
 
       {/* ─── Main Content ─── */}
       <div style={{ padding: "14px 12px 40px", animation: "fadeIn 0.2s ease" }}>
-        <div className="card" style={{ background: "linear-gradient(135deg, #14532D, #16A34A)", padding: "20px 16px", marginBottom: 14 }}>
-          <div style={{ fontSize: 11, color: "rgba(255,255,255,0.7)", fontWeight: 600, marginBottom: 4 }}>試合予想シミュレーション</div>
-          <div style={{ fontSize: 22, fontWeight: 900, color: "#fff" }}>⚽ FIFA W杯 2026</div>
-          <div style={{ fontSize: 12, color: "rgba(255,255,255,0.75)", marginTop: 6 }}>試合ごとに勝敗を予想してベット！<br />グループ戦は引き分けあり・決勝Tはなし</div>
-          <div style={{ marginTop: 12, display: "flex", gap: 14, fontSize: 11, color: "rgba(255,255,255,0.8)" }}>
-            <span>👥 {rawBets.length}ベット</span>
-            <span>📅 6/15 開幕</span>
+        <div className="card" style={{
+          position: "relative", overflow: "hidden", padding: "20px 16px", marginBottom: 14, border: "none",
+          background: "linear-gradient(135deg, rgba(20,83,45,0.85), rgba(22,163,106,0.85))",
+        }}>
+          <div style={{
+            position: "absolute", top: 0, left: 0, right: 0, bottom: 0,
+            backgroundImage: "url('/images/japan-2026.jpg')", backgroundSize: "cover", backgroundPosition: "center top",
+            opacity: 0.3, zIndex: 0,
+          }} />
+          <div style={{ position: "relative", zIndex: 1 }}>
+            <div style={{ fontSize: 11, color: "rgba(255,255,255,0.7)", fontWeight: 600, marginBottom: 4 }}>試合予想シミュレーション</div>
+            <div style={{ fontSize: 22, fontWeight: 900, color: "#fff" }}>⚽ FIFA W杯 2026</div>
+            <div style={{ fontSize: 12, color: "rgba(255,255,255,0.75)", marginTop: 6 }}>試合ごとに勝敗を予想してベット！<br />グループ戦は引き分けあり・決勝Tはなし</div>
+            <div style={{ marginTop: 12, display: "flex", gap: 14, fontSize: 11, color: "rgba(255,255,255,0.8)" }}>
+              <span>👥 {rawBets.length}ベット</span>
+              <span>📅 6/15 開幕</span>
+            </div>
           </div>
         </div>
         <SettledPortfolio bets={rawBets} matches={matches} />
