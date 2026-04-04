@@ -38,6 +38,7 @@ const TABS = [
 const POOL_COLORS = { A: "#6366F1", B: "#F43F5E", C: "#0EA5E9", D: "#F59E0B" };
 
 const STAGE_LABELS = {
+  friendly: "親善試合",
   group: "グループステージ",
   r32: "ラウンド32",
   qf: "準々決勝",
@@ -50,7 +51,7 @@ const SOCCER_FLAGS = {
   "ブラジル": "🇧🇷", "モロッコ": "🇲🇦", "スペイン": "🇪🇸", "ウルグアイ": "🇺🇾",
   "フランス": "🇫🇷", "セネガル": "🇸🇳", "アルゼンチン": "🇦🇷", "オーストリア": "🇦🇹",
   "ポルトガル": "🇵🇹", "コロンビア": "🇨🇴", "イングランド": "🏴󠁧󠁢󠁥󠁮󠁧󠁿", "クロアチア": "🇭🇷",
-  "ドイツ": "🇩🇪", "コートジボワール": "🇨🇮",
+  "ドイツ": "🇩🇪", "コートジボワール": "🇨🇮", "アイスランド": "🇮🇸",
 };
 
 function getFlag(name) { return SOCCER_FLAGS[name] || "🏳️"; }
@@ -1101,7 +1102,7 @@ export default function App() {
         {/* Match Tabs */}
         {(() => {
           const now = new Date();
-          const groupMatches = matches.filter(m => m.stage === "group");
+          const groupMatches = matches.filter(m => m.stage === "group" || m.stage === "friendly");
           const openMatches = groupMatches.filter(m => !m.result && !(m.match_date && now > new Date(m.match_date)));
           const closedMatches = groupMatches.filter(m => m.result || (m.match_date && now > new Date(m.match_date)));
           const filtered = matchTab === "open" ? openMatches : closedMatches;
