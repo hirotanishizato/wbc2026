@@ -156,8 +156,8 @@ function PersonalStatsModal({ bets, winnerData, onClose }) {
                   <span style={{ fontSize: 11, color: "#6B7280", background: "#F3F4F6", padding: "2px 8px", borderRadius: 20, fontWeight: 600 }}>{user.teams.length}チーム</span>
                 </div>
                 <div style={{ display: "flex", gap: 14, alignItems: "center" }}>
-                  <span style={{ fontSize: 11, color: "#9CA3AF" }}>投資 <span style={{ fontWeight: 800, color: "#1F2937" }}>🎱{user.totalBet.toLocaleString()}</span></span>
-                  <span style={{ fontSize: 11, color: "#9CA3AF" }}>ベスト <span style={{ fontWeight: 800, color: user.bestProfit >= 0 ? "#16A34A" : "#DC2626" }}>{user.bestProfit >= 0 ? "+" : "-"}🎱{Math.abs(user.bestProfit).toLocaleString()}</span></span>
+                  <span style={{ fontSize: 11, color: "#9CA3AF" }}>投資 <span style={{ fontWeight: 800, color: "#1F2937" }}>⚽{user.totalBet.toLocaleString()}</span></span>
+                  <span style={{ fontSize: 11, color: "#9CA3AF" }}>ベスト <span style={{ fontWeight: 800, color: user.bestProfit >= 0 ? "#16A34A" : "#DC2626" }}>{user.bestProfit >= 0 ? "+" : "-"}⚽{Math.abs(user.bestProfit).toLocaleString()}</span></span>
                 </div>
               </div>
               <span style={{ fontSize: 14, color: "#D1D5DB", transition: "transform 0.2s", transform: expanded === ui ? "rotate(180deg)" : "rotate(0deg)" }}>▼</span>
@@ -166,9 +166,9 @@ function PersonalStatsModal({ bets, winnerData, onClose }) {
               <div style={{ padding: "0 16px 16px", borderTop: "1px solid #F3F4F6" }}>
                 <div style={{ display: "flex", gap: 8, margin: "14px 0" }}>
                   {[
-                    { label: "総投資", value: `🎱${user.totalBet.toLocaleString()}`, bg: "#FEF2F2", color: "#DC2626" },
-                    { label: "最高払戻", value: `🎱${user.bestPayout.toLocaleString()}`, bg: "#F0FDF4", color: "#16A34A" },
-                    { label: "ベスト損益", value: `${user.bestProfit >= 0 ? "+" : "-"}🎱${Math.abs(user.bestProfit).toLocaleString()}`, bg: user.bestProfit >= 0 ? "#F0FDF4" : "#FEF2F2", color: user.bestProfit >= 0 ? "#16A34A" : "#DC2626" },
+                    { label: "総投資", value: `⚽${user.totalBet.toLocaleString()}`, bg: "#FEF2F2", color: "#DC2626" },
+                    { label: "最高払戻", value: `⚽${user.bestPayout.toLocaleString()}`, bg: "#F0FDF4", color: "#16A34A" },
+                    { label: "ベスト損益", value: `${user.bestProfit >= 0 ? "+" : "-"}⚽${Math.abs(user.bestProfit).toLocaleString()}`, bg: user.bestProfit >= 0 ? "#F0FDF4" : "#FEF2F2", color: user.bestProfit >= 0 ? "#16A34A" : "#DC2626" },
                   ].map((c, ci) => (
                     <div key={ci} style={{ flex: 1, padding: "10px 6px", borderRadius: 10, background: c.bg, textAlign: "center" }}>
                       <div style={{ fontSize: 9, color: "#9CA3AF", marginBottom: 4 }}>{c.label}</div>
@@ -189,9 +189,9 @@ function PersonalStatsModal({ bets, winnerData, onClose }) {
                       </div>
                       <div style={{ display: "flex", gap: 6 }}>
                         {[
-                          { label: `賭け${t.betCount > 1 ? "(計)" : ""}`, value: `🎱${t.amount.toLocaleString()}`, color: "#6B7280" },
-                          { label: "払戻", value: `🎱${t.payout.toLocaleString()}`, color: "#16A34A" },
-                          { label: "損益", value: `${netIfHit >= 0 ? "+" : "-"}🎱${Math.abs(netIfHit).toLocaleString()}`, color: netIfHit >= 0 ? "#16A34A" : "#DC2626" },
+                          { label: `賭け${t.betCount > 1 ? "(計)" : ""}`, value: `⚽${t.amount.toLocaleString()}`, color: "#6B7280" },
+                          { label: "払戻", value: `⚽${t.payout.toLocaleString()}`, color: "#16A34A" },
+                          { label: "損益", value: `${netIfHit >= 0 ? "+" : "-"}⚽${Math.abs(netIfHit).toLocaleString()}`, color: netIfHit >= 0 ? "#16A34A" : "#DC2626" },
                         ].map((c, ci) => (
                           <div key={ci} style={{ flex: 1, padding: "6px 4px", borderRadius: 8, background: "#F9FAFB", textAlign: "center" }}>
                             <div style={{ fontSize: 9, color: "#9CA3AF", marginBottom: 2 }}>{c.label}</div>
@@ -231,7 +231,7 @@ function HistoryModal({ bets, onClose }) {
               </div>
               <div style={{ fontSize: 11, color: "#D1D5DB", fontFamily: "'DM Mono', monospace" }}>{formatTime(b.time)}</div>
             </div>
-            <span style={{ fontSize: 14, fontWeight: 800, color: "#4F46E5", fontFamily: "'DM Mono', monospace" }}>🎱{b.amount.toLocaleString()}</span>
+            <span style={{ fontSize: 14, fontWeight: 800, color: "#4F46E5", fontFamily: "'DM Mono', monospace" }}>⚽{b.amount.toLocaleString()}</span>
           </div>
         ))}
       </div>
@@ -289,7 +289,7 @@ function BetForm({ onSubmit, label, disabled, sportEmoji = "⚾" }) {
         <input type="text" placeholder="名前" value={name} onChange={(e) => setName(e.target.value)}
           style={{ flex: 1, padding: "12px 14px", borderRadius: 12, background: "#fff", border: "1px solid #E5E7EB", color: "#1F2937", fontSize: 14, outline: "none", minWidth: 0, boxSizing: "border-box", fontFamily: "inherit" }} />
         <div style={{ position: "relative", width: "38%" }}>
-          <span style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", fontSize: 14, pointerEvents: "none" }}>🎱</span>
+          <span style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", fontSize: 14, pointerEvents: "none" }}>⚽</span>
           <input type="number" placeholder="数量" value={amount} min="100" step="100" onChange={(e) => setAmount(e.target.value)}
             style={{ width: "100%", boxSizing: "border-box", padding: "12px 10px 12px 30px", borderRadius: 12, background: "#fff", border: "1px solid #E5E7EB", color: "#1F2937", fontSize: 14, outline: "none", fontFamily: "'DM Mono', monospace" }} />
         </div>
@@ -481,17 +481,10 @@ function MatchCard({ match, bets, pick, onPick, onBet }) {
 
 /* ═══════════════════════ MAIN APP ═══════════════════════ */
 export default function App() {
-  const [tab, setTab] = useState("top");
-  const [page, setPage] = useState("home");
-  const [winnerPick, setWinnerPick] = useState(null);
-  const [winnerData, setWinnerData] = useState({});
-  const [recentBets, setRecentBets] = useState([]);
   const [rawBets, setRawBets] = useState([]);
   const [toast, setToast] = useState("");
   const [loading, setLoading] = useState(true);
   const [showHistory, setShowHistory] = useState(false);
-  const [showStats, setShowStats] = useState(false);
-  const countdown = useCountdown();
   const [matches, setMatches] = useState([]);
   const [matchPick, setMatchPick] = useState(null);
 
@@ -502,10 +495,7 @@ export default function App() {
       const { data, error } = await supabase.from("bets").select("*").abortSignal(controller.signal);
       clearTimeout(timeout);
       if (!error && data) {
-        setRawBets(data);
-        const agg = aggregateBets(data);
-        setWinnerData(agg.winnerData);
-        setRecentBets(agg.recent);
+        setRawBets(data.filter(b => b.match_id !== "winner"));
       }
     } catch (e) {
       if (retry < 2) { await new Promise(r => setTimeout(r, 1500)); return loadData(retry + 1); }
@@ -527,12 +517,6 @@ export default function App() {
 
   const showToast = (msg) => { setToast(msg); setTimeout(() => setToast(""), 2500); };
 
-  const handleWinnerBet = async (name, amount) => {
-    if (!winnerPick || countdown.expired) return;
-    const { error } = await supabase.from("bets").insert({ match_id: "winner", team_side: winnerPick, user_name: name, amount });
-    if (!error) { setWinnerPick(null); showToast("ベット完了！"); loadData(); }
-  };
-
   const handleMatchPick = (matchId, side) => {
     if (matchPick?.matchId === matchId && matchPick?.side === side) setMatchPick(null);
     else setMatchPick({ matchId, side });
@@ -544,28 +528,13 @@ export default function App() {
     if (!error) { setMatchPick(null); showToast("ベット完了！⚽"); loadData(); }
   };
 
-  const winnerOdds = calcOdds(winnerData, TEAMS.map((t) => t.name));
-  const winnerRanking = TEAMS.map((t) => ({ label: t.name, flag: t.flag, ...(winnerOdds[t.name] || { count: 0, total: 0, odds: "-", pct: 0 }) }));
-  let totalBets = 0, totalAmount = 0;
-  Object.values(winnerData).forEach((d) => { totalBets += d.count; totalAmount += d.total; });
-  const sorted = [...winnerRanking].sort((a, b) => b.pct - a.pct).filter(x => x.pct > 0);
-  const topPicks = sorted.slice(0, 3).map((item, i) => {
-    const colors = [{ bg: "#FEE2E2", color: "#DC2626", borderColor: "#FECACA" }, { bg: "#DBEAFE", color: "#2563EB", borderColor: "#BFDBFE" }, { bg: "#FEF3C7", color: "#D97706", borderColor: "#FDE68A" }];
-    return { label: `${item.flag} ${item.label}`, ...colors[i] };
-  });
-  const topResult = sorted.length > 0 ? { pct: sorted[0].pct, label: sorted[0].label } : null;
-
-  const soccerBets = rawBets.filter(b => b.match_id !== "winner");
   const stageOrder = ["group", "r32", "qf", "sf", "final"];
   const groupedMatches = {};
   matches.forEach(m => { if (!groupedMatches[m.stage]) groupedMatches[m.stage] = []; groupedMatches[m.stage].push(m); });
 
-  const openWbc = () => { setPage("wbc-detail"); setTab("wbc"); };
-  const goHome = () => { setPage("home"); setWinnerPick(null); };
-
   if (loading) return (
     <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#fff" }}>
-      <div style={{ textAlign: "center" }}><div style={{ fontSize: 48, marginBottom: 12 }}>⚾</div><div style={{ fontSize: 14, color: "#9CA3AF", fontWeight: 600 }}>Loading...</div></div>
+      <div style={{ textAlign: "center" }}><div style={{ fontSize: 48, marginBottom: 12 }}>⚽</div><div style={{ fontSize: 14, color: "#9CA3AF", fontWeight: 600 }}>Loading...</div></div>
     </div>
   );
 
@@ -583,210 +552,49 @@ export default function App() {
         .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.4); backdrop-filter: blur(4px); z-index: 10000; display: flex; justify-content: center; align-items: flex-start; padding: 40px 12px; overflow-y: auto; }
         .modal-content { width: 100%; max-width: 460px; background: #fff; border-radius: 20px; padding: 20px 16px; box-shadow: 0 20px 60px rgba(0,0,0,0.15); animation: slideUp 0.25s ease; }
         .close-btn { background: #F3F4F6; border: none; color: #9CA3AF; font-size: 16px; width: 34px; height: 34px; border-radius: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
-        .tab-scroll { display: flex; gap: 0; overflow-x: auto; -webkit-overflow-scrolling: touch; padding: 0 16px; }
-        .tab-scroll::-webkit-scrollbar { display: none; }
         @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
       `}</style>
 
       {/* ─── Header ─── */}
       <div style={{ position: "sticky", top: 0, zIndex: 100, background: "#fff", borderBottom: "1px solid #F3F4F6" }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 16px 8px" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 16px 14px" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            {page === "wbc-detail" ? (
-              <button onClick={goHome} style={{ background: "none", border: "none", fontSize: 22, cursor: "pointer", padding: "0 4px", color: "#6B7280" }}>←</button>
-            ) : (
-              <span style={{ fontSize: 20 }}>🎱</span>
-            )}
-            <span style={{ fontSize: 16, fontWeight: 900, color: "#1F2937" }}>{page === "wbc-detail" ? "WBC 2026 優勝予想" : "BillPre"}</span>
+            <span style={{ fontSize: 20 }}>⚽</span>
+            <span style={{ fontSize: 16, fontWeight: 900, color: "#1F2937" }}>BillPre</span>
           </div>
           <div style={{ padding: "4px 12px", borderRadius: 20, background: "#FEF2F2", fontSize: 10, color: "#DC2626", fontWeight: 700 }}>⚠ シミュレーション</div>
         </div>
-        {page === "home" && (
-          <div className="tab-scroll">
-            {TABS.map((t) => (
-              <button key={t.key} onClick={() => setTab(t.key)} style={{
-                padding: "10px 18px", background: "none", border: "none", cursor: "pointer", fontSize: 14,
-                fontWeight: tab === t.key ? 800 : 500, color: tab === t.key ? "#4F46E5" : "#9CA3AF",
-                borderBottom: tab === t.key ? "3px solid #4F46E5" : "3px solid transparent",
-                transition: "all 0.15s", whiteSpace: "nowrap", flexShrink: 0, fontFamily: "inherit",
-              }}>{t.label}</button>
-            ))}
-          </div>
-        )}
       </div>
 
-      {/* ─── HOME ─── */}
-      {page === "home" && (
-        <div style={{ padding: "14px 12px 40px", animation: "fadeIn 0.2s ease" }}>
-
-          {/* TOP タブ */}
-          {tab === "top" && (
-            <>
-              <PredictionCard
-                title="WBC 2026 優勝国は？" category="⚾ WBC"
-                bannerStyle={{ background: "url('/images/banner-wbc.jpg') center center / cover no-repeat" }}
-                topPicks={topPicks} participants={totalBets}
-                deadline={countdown.expired ? "締切済み" : "03/05 (水)"} topResult={topResult} onClick={openWbc}
-              />
-              <PredictionCard
-                title="FIFA ワールドカップ 2026 試合予想" category="⚽ サッカー"
-                bannerStyle={{ background: "linear-gradient(135deg, #14532D 0%, #16A34A 50%, #15803D 100%)" }}
-                topPicks={[
-                  { label: "🇯🇵 日本 vs 🇳🇱 オランダ", bg: "#F0FDF4", color: "#16A34A", borderColor: "#BBF7D0" },
-                  { label: "🇧🇷 ブラジル vs 🇲🇦 モロッコ", bg: "#FFFBEB", color: "#D97706", borderColor: "#FDE68A" },
-                ]}
-                participants={soccerBets.length} deadline="6/15 開幕" topResult={null}
-                onClick={() => setTab("soccer")}
-              />
-              <div style={{ marginTop: 4, marginBottom: 8 }}>
-                <div style={{ fontSize: 14, fontWeight: 800, color: "#1F2937", marginBottom: 12, padding: "0 4px" }}>🔜 近日公開</div>
-                {[
-                  { icon: "🥊", title: "井上尚弥 vs TBA 勝敗予想", cat: "ボクシング", bg: "#FEF2F2", catColor: "#DC2626" },
-                  { icon: "🀄", title: "Mリーグ 2025-26 優勝チーム", cat: "麻雀", bg: "#F5F3FF", catColor: "#7C3AED" },
-                ].map((item, i) => (
-                  <div key={i} className="card" style={{ display: "flex", alignItems: "center", gap: 14, padding: "14px 16px", opacity: 0.6 }}>
-                    <div style={{ width: 48, height: 48, borderRadius: 12, background: item.bg, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24, flexShrink: 0 }}>{item.icon}</div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 13, fontWeight: 700, color: "#374151", marginBottom: 3 }}>{item.title}</div>
-                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                        <span style={{ fontSize: 10, fontWeight: 700, color: item.catColor, background: `${item.catColor}12`, padding: "2px 8px", borderRadius: 10 }}>{item.cat}</span>
-                        <span style={{ fontSize: 10, color: "#D1D5DB" }}>近日公開</span>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </>
-          )}
-
-          {/* WBC タブ */}
-          {tab === "wbc" && (
-            <PredictionCard
-              title="WBC 2026 優勝国は？" category="⚾ WBC"
-              bannerStyle={{ background: "url('/images/banner-wbc.jpg') center center / cover no-repeat" }}
-              topPicks={topPicks} participants={totalBets}
-              deadline={countdown.expired ? "締切済み" : "03/05 (水)"} topResult={topResult} onClick={openWbc}
-            />
-          )}
-
-          {/* サッカー タブ */}
-          {tab === "soccer" && (
-            <div style={{ animation: "fadeIn 0.2s ease" }}>
-              <div className="card" style={{ background: "linear-gradient(135deg, #14532D, #16A34A)", padding: "20px 16px", marginBottom: 14 }}>
-                <div style={{ fontSize: 11, color: "rgba(255,255,255,0.7)", fontWeight: 600, marginBottom: 4 }}>試合予想シミュレーション</div>
-                <div style={{ fontSize: 22, fontWeight: 900, color: "#fff" }}>⚽ FIFA W杯 2026</div>
-                <div style={{ fontSize: 12, color: "rgba(255,255,255,0.75)", marginTop: 6 }}>試合ごとに勝敗を予想してベット！<br />グループ戦は引き分けあり・決勝Tはなし</div>
-                <div style={{ marginTop: 12, display: "flex", gap: 14, fontSize: 11, color: "rgba(255,255,255,0.8)" }}>
-                  <span>👥 {soccerBets.length}ベット</span>
-                  <span>📅 6/15 開幕</span>
-                </div>
-              </div>
-              {matches.length === 0 && <div style={{ textAlign: "center", padding: 40, color: "#9CA3AF" }}>読み込み中...</div>}
-              {stageOrder.map(stage => {
-                const sm = groupedMatches[stage];
-                if (!sm || sm.length === 0) return null;
-                const icons = { group: "🏟️", r32: "⚡", qf: "🔥", sf: "💥", final: "🏆" };
-                return (
-                  <div key={stage} style={{ marginBottom: 8 }}>
-                    <div style={{ fontSize: 13, fontWeight: 800, color: "#6B7280", marginBottom: 10, padding: "0 2px" }}>
-                      {icons[stage]} {STAGE_LABELS[stage]}
-                    </div>
-                    {sm.map(match => (
-                      <MatchCard key={match.id} match={match} bets={rawBets} pick={matchPick} onPick={handleMatchPick} onBet={handleMatchBet} />
-                    ))}
-                  </div>
-                );
-              })}
-            </div>
-          )}
-
-          {tab === "boxing" && <ComingSoon category="boxing" />}
-          {tab === "mahjong" && <ComingSoon category="mahjong" />}
-        </div>
-      )}
-
-      {/* ─── WBC DETAIL ─── */}
-      {page === "wbc-detail" && (
-        <div style={{ padding: "14px 12px 40px", animation: "fadeIn 0.2s ease" }}>
-          {countdown.expired ? (
-            <div className="card" style={{ textAlign: "center", background: "linear-gradient(135deg, #FEE2E2, #FFF1F2)", border: "1px solid #FECACA" }}>
-              <div style={{ fontSize: 15, fontWeight: 700, color: "#DC2626" }}>🔒 投票は締め切りました</div>
-              <div style={{ fontSize: 12, color: "#9CA3AF", marginTop: 4 }}>WBC 2026 開幕！結果をお楽しみに</div>
-            </div>
-          ) : (
-            <div className="card" style={{ textAlign: "center", background: "linear-gradient(135deg, #EEF2FF, #F0F9FF)", border: "1px solid #C7D2FE" }}>
-              <div style={{ fontSize: 11, color: "#6B7280", fontWeight: 600, marginBottom: 10 }}>⏰ 投票〆切まで（3/5 12:00 開幕戦）</div>
-              <div style={{ display: "flex", justifyContent: "center", gap: 10 }}>
-                {[{ v: countdown.days, l: "日" }, { v: countdown.hours, l: "時間" }, { v: countdown.minutes, l: "分" }, { v: countdown.seconds, l: "秒" }].map((u, i) => (
-                  <div key={i} style={{ textAlign: "center" }}>
-                    <div style={{ width: 52, height: 52, borderRadius: 12, background: "#fff", boxShadow: "0 2px 8px rgba(99,102,241,0.12)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, fontWeight: 800, color: "#4F46E5", fontFamily: "'DM Mono', monospace" }}>{String(u.v).padStart(2, "0")}</div>
-                    <div style={{ fontSize: 10, color: "#9CA3AF", marginTop: 4, fontWeight: 600 }}>{u.l}</div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 12 }}>
-            <div className="card" style={{ textAlign: "center", marginBottom: 0 }}>
-              <div style={{ fontSize: 11, color: "#9CA3AF", marginBottom: 4 }}>参加数</div>
-              <div style={{ fontSize: 22, fontWeight: 800, color: "#1F2937", fontFamily: "'DM Mono', monospace" }}>{totalBets}</div>
-            </div>
-            <div className="card" style={{ textAlign: "center", marginBottom: 0 }}>
-              <div style={{ fontSize: 11, color: "#9CA3AF", marginBottom: 4 }}>総ベット</div>
-              <div style={{ fontSize: 22, fontWeight: 800, color: "#4F46E5", fontFamily: "'DM Mono', monospace" }}>🎱{totalAmount.toLocaleString()}</div>
-            </div>
+      {/* ─── Main Content ─── */}
+      <div style={{ padding: "14px 12px 40px", animation: "fadeIn 0.2s ease" }}>
+        <div className="card" style={{ background: "linear-gradient(135deg, #14532D, #16A34A)", padding: "20px 16px", marginBottom: 14 }}>
+          <div style={{ fontSize: 11, color: "rgba(255,255,255,0.7)", fontWeight: 600, marginBottom: 4 }}>試合予想シミュレーション</div>
+          <div style={{ fontSize: 22, fontWeight: 900, color: "#fff" }}>⚽ FIFA W杯 2026</div>
+          <div style={{ fontSize: 12, color: "rgba(255,255,255,0.75)", marginTop: 6 }}>試合ごとに勝敗を予想してベット！<br />グループ戦は引き分けあり・決勝Tはなし</div>
+          <div style={{ marginTop: 12, display: "flex", gap: 14, fontSize: 11, color: "rgba(255,255,255,0.8)" }}>
+            <span>👥 {rawBets.length}ベット</span>
+            <span>📅 6/15 開幕</span>
           </div>
-          {recentBets.length > 0 && (
-            <div className="card">
-              <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 10 }}>
-                <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#22C55E", display: "inline-block" }} />
-                <span style={{ fontSize: 13, fontWeight: 700, color: "#1F2937" }}>最新ベット</span>
+        </div>
+        {matches.length === 0 && <div style={{ textAlign: "center", padding: 40, color: "#9CA3AF" }}>読み込み中...</div>}
+        {stageOrder.map(stage => {
+          const sm = groupedMatches[stage];
+          if (!sm || sm.length === 0) return null;
+          const icons = { group: "🏟️", r32: "⚡", qf: "🔥", sf: "💥", final: "🏆" };
+          return (
+            <div key={stage} style={{ marginBottom: 8 }}>
+              <div style={{ fontSize: 13, fontWeight: 800, color: "#6B7280", marginBottom: 10, padding: "0 2px" }}>
+                {icons[stage]} {STAGE_LABELS[stage]}
               </div>
-              {recentBets.slice(0, 4).map((b, i) => (
-                <div key={i} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "9px 0", borderBottom: i < Math.min(recentBets.length, 4) - 1 ? "1px solid #F3F4F6" : "none" }}>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                      <span style={{ fontSize: 12, fontWeight: 600, color: "#6B7280" }}>{b.name}</span>
-                      <span style={{ fontSize: 10, color: "#D1D5DB" }}>▸</span>
-                      <span style={{ fontSize: 13, fontWeight: 600, color: "#1F2937", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{b.pick}</span>
-                    </div>
-                    <div style={{ fontSize: 10, color: "#D1D5DB", marginTop: 2, fontFamily: "'DM Mono', monospace" }}>{formatTime(b.time)}</div>
-                  </div>
-                  <span style={{ fontSize: 13, fontWeight: 800, color: "#4F46E5", fontFamily: "'DM Mono', monospace", flexShrink: 0, marginLeft: 8 }}>🎱{b.amount.toLocaleString()}</span>
-                </div>
+              {sm.map(match => (
+                <MatchCard key={match.id} match={match} bets={rawBets} pick={matchPick} onPick={handleMatchPick} onBet={handleMatchBet} />
               ))}
             </div>
-          )}
-          <div style={{ display: "flex", gap: 10, marginBottom: 14 }}>
-            <button onClick={() => setShowHistory(true)} style={{ flex: 1, padding: "14px 10px", borderRadius: 16, cursor: "pointer", textAlign: "center", background: "#fff", border: "1px solid #F3F4F6", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
-              <div style={{ fontSize: 20, marginBottom: 4 }}>📋</div>
-              <div style={{ fontSize: 12, fontWeight: 800, color: "#1F2937" }}>全ベット履歴</div>
-            </button>
-            <button onClick={() => setShowStats(true)} style={{ flex: 1, padding: "14px 10px", borderRadius: 16, cursor: "pointer", textAlign: "center", background: "#fff", border: "1px solid #F3F4F6", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
-              <div style={{ fontSize: 20, marginBottom: 4 }}>👤</div>
-              <div style={{ fontSize: 12, fontWeight: 800, color: "#1F2937" }}>個人別成績</div>
-            </button>
-          </div>
-          {winnerPick && !countdown.expired && (
-            <BetForm label={`🏆 「${TEAMS.find((t) => t.name === winnerPick)?.flag} ${winnerPick}」にベット`} onSubmit={handleWinnerBet} disabled={!winnerPick} />
-          )}
-          {winnerRanking.some((x) => x.pct > 0) && (
-            <div className="card">
-              <div style={{ fontSize: 14, fontWeight: 800, color: "#1F2937", marginBottom: 2 }}>📊 オッズランキング</div>
-              <RankingBar items={winnerRanking} />
-            </div>
-          )}
-          <div style={{ marginBottom: 8 }}>
-            <div style={{ fontSize: 14, fontWeight: 700, color: "#6B7280", marginBottom: 12, padding: "0 2px" }}>
-              {countdown.expired ? "🔒 投票は締め切りました" : winnerPick ? "💡 他のチームに変更もできます" : "🏆 優勝チームを選んでください"}
-            </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              {TEAMS.map((team) => (<TeamButton key={team.name} team={team} selected={winnerPick} onClick={setWinnerPick} odds={winnerOdds[team.name]} disabled={countdown.expired} />))}
-            </div>
-          </div>
-        </div>
-      )}
+          );
+        })}
+      </div>
 
       {/* ─── Footer ─── */}
       <div style={{ padding: "20px 16px 40px", textAlign: "center" }}>
@@ -796,8 +604,7 @@ export default function App() {
       </div>
 
       <SuccessToast message={toast} />
-      {showHistory && <HistoryModal bets={recentBets} onClose={() => setShowHistory(false)} />}
-      {showStats && <PersonalStatsModal bets={rawBets} winnerData={winnerData} onClose={() => setShowStats(false)} />}
+      {showHistory && <HistoryModal bets={rawBets} onClose={() => setShowHistory(false)} />}
     </div>
   );
 }
