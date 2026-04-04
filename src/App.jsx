@@ -568,6 +568,7 @@ function MatchCard({ match, bets, pick, onPick, onBet }) {
 
 /* ─── PersonalPortfolio ─── */
 function PersonalPortfolio({ bets, matches }) {
+  const [open, setOpen] = useState(false);
   const [expanded, setExpanded] = useState(null);
   // Group bets by user
   const users = {};
@@ -626,11 +627,22 @@ function PersonalPortfolio({ bets, matches }) {
   const sideName = (side, m) => side === "draw" ? "引分" : side === "home_win" ? m.home_team : m.away_team;
 
   return (
-    <div style={{ marginTop: 20, marginBottom: 14 }}>
-      <div style={{ fontSize: 13, fontWeight: 800, color: "#6B7280", marginBottom: 10, padding: "0 2px" }}>
-        👤 個人別ポートフォリオ
-      </div>
-      {userList.map((user, ui) => (
+    <div style={{ marginBottom: 14 }}>
+      <button onClick={() => setOpen(!open)} className="card" style={{
+        width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between",
+        cursor: "pointer", padding: "14px 16px", marginBottom: open ? 8 : 12,
+        background: "linear-gradient(135deg, #4F46E5, #6366F1)", border: "none", fontFamily: "inherit",
+      }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <span style={{ fontSize: 16 }}>👤</span>
+          <span style={{ fontSize: 14, fontWeight: 800, color: "#fff" }}>個人別ポートフォリオ</span>
+          <span style={{ fontSize: 10, color: "rgba(255,255,255,0.7)", background: "rgba(255,255,255,0.2)", padding: "2px 8px", borderRadius: 20, fontWeight: 600 }}>
+            {userList.length}人
+          </span>
+        </div>
+        <span style={{ fontSize: 12, color: "rgba(255,255,255,0.6)", transition: "transform 0.2s", transform: open ? "rotate(180deg)" : "none" }}>▼</span>
+      </button>
+      {open && userList.map((user, ui) => (
         <div key={user.name} className="card" style={{ padding: 0, overflow: "hidden", marginBottom: 8 }}>
           <button onClick={() => setExpanded(expanded === ui ? null : ui)} style={{
             width: "100%", padding: "14px 16px", display: "flex", alignItems: "center", justifyContent: "space-between",
@@ -766,7 +778,7 @@ export default function App() {
     if (!error) { setMatchPick(null); showToast("ベット完了！⚽"); loadData(); }
   };
 
-  const stageOrder = ["group", "r32", "qf", "sf", "final"];
+  const stageOrder = ["group"];
   const groupedMatches = {};
   matches.forEach(m => { if (!groupedMatches[m.stage]) groupedMatches[m.stage] = []; groupedMatches[m.stage].push(m); });
 
@@ -816,6 +828,8 @@ export default function App() {
             <span>📅 6/15 開幕</span>
           </div>
         </div>
+        <PersonalPortfolio bets={rawBets} matches={matches} />
+
         {matches.length === 0 && <div style={{ textAlign: "center", padding: 40, color: "#9CA3AF" }}>読み込み中...</div>}
         {stageOrder.map(stage => {
           const sm = groupedMatches[stage];
@@ -832,11 +846,6 @@ export default function App() {
             </div>
           );
         })}
-      </div>
-
-      {/* ─── Personal Portfolio ─── */}
-      <div style={{ padding: "0 12px" }}>
-        <PersonalPortfolio bets={rawBets} matches={matches} />
       </div>
 
       {/* ─── Footer ─── */}
