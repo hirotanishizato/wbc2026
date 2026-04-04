@@ -410,9 +410,12 @@ function ComingSoon({ category }) {
 }
 
 /* ─── MatchCard ─── */
-function MatchCard({ match, bets, pick, onPick, onBet, isAdmin, onSetResult }) {
+function MatchCard({ match, bets, pick, onPick, onBet, isAdmin, onSetResult, onClearResult, onDeleteBet, onEditBet }) {
   const [showBets, setShowBets] = useState(false);
   const [adminPick, setAdminPick] = useState(null);
+  const [editingBet, setEditingBet] = useState(null);
+  const [editName, setEditName] = useState("");
+  const [editAmount, setEditAmount] = useState("");
   const now = new Date();
   const matchDate = match.match_date ? new Date(match.match_date) : null;
   const isPast = matchDate ? now > matchDate : false;
@@ -523,6 +526,14 @@ function MatchCard({ match, bets, pick, onPick, onBet, isAdmin, onSetResult }) {
           <div style={{ fontSize: 15, fontWeight: 800, color: "#15803D" }}>
             {match.result === "draw" ? "🤝 引き分け" : `${getFlag(match.result === "home_win" ? match.home_team : match.away_team)} ${match.result === "home_win" ? match.home_team : match.away_team} 勝利`}
           </div>
+          {isAdmin && (
+            <button onClick={() => { if (confirm("結果を取り消しますか？獲得ポイントもリセットされます。")) onClearResult(match.id); }} style={{
+              marginTop: 8, padding: "6px 16px", borderRadius: 8, border: "1px solid #FCA5A5",
+              background: "#FEF2F2", color: "#DC2626", fontSize: 10, fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
+            }}>
+              結果を取り消す
+            </button>
+          )}
         </div>
       )}
       {/* Admin: set result (available even before lock for testing) */}
@@ -585,47 +596,75 @@ function MatchCard({ match, bets, pick, onPick, onBet, isAdmin, onSetResult }) {
                 <div style={{ flex: 1, fontSize: 9, color: "#9CA3AF", fontWeight: 700 }}>名前</div>
                 <div style={{ width: 64, fontSize: 9, color: "#9CA3AF", fontWeight: 700, textAlign: "center" }}>予想</div>
                 <div style={{ width: 56, fontSize: 9, color: "#9CA3AF", fontWeight: 700, textAlign: "right" }}>ベット</div>
-                <div style={{ width: 68, fontSize: 9, color: "#9CA3AF", fontWeight: 700, textAlign: "right" }}>{match.result ? "結果" : "的中時払戻"}</div>
+                <div style={{ width: isAdmin ? 36 : 68, fontSize: 9, color: "#9CA3AF", fontWeight: 700, textAlign: "right" }}>{match.result ? "結果" : "払戻"}</div>
+                {isAdmin && <div style={{ width: 50, fontSize: 9, color: "#9CA3AF", fontWeight: 700, textAlign: "right" }}>操作</div>}
               </div>
-              {/* Bet rows */}
-              {betList.map((b, i) => {
+              {/* Bet rows - admin sees individual bets, users see aggregated */}
+              {(isAdmin ? matchBets.map(b => {
+                const payout = totals[b.team_side] > 0 ? Math.round(b.amount * (totalAmt / totals[b.team_side])) : 0;
+                return { id: b.id, name: b.user_name, side: b.team_side, amount: b.amount, payout, profit: payout - b.amount };
+              }) : betList).map((b, i, arr) => {
                 const isWinner = match.result && b.side === match.result;
                 const isLoser = match.result && b.side !== match.result;
                 const actualProfit = isWinner ? b.payout - b.amount : isLoser ? -b.amount : b.profit;
+                const isEditing = editingBet === b.id;
                 return (
-                  <div key={i} style={{
-                    display: "flex", alignItems: "center", padding: "9px 12px",
-                    borderBottom: i < betList.length - 1 ? "1px solid #F9FAFB" : "none",
-                    background: isWinner ? "#F0FDF4" : isLoser ? "#FEF2F2" : "#fff",
-                  }}>
-                    <div style={{ flex: 1, fontSize: 12, fontWeight: 700, color: "#1F2937", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                      {isWinner && "🎉 "}{isLoser && "💔 "}{b.name}
-                    </div>
-                    <div style={{ width: 64, textAlign: "center" }}>
-                      <span style={{ fontSize: 10, padding: "2px 6px", borderRadius: 6, fontWeight: 700, background: sideColors[b.side]?.bg || "#F3F4F6", color: sideColors[b.side]?.color || "#6B7280" }}>
-                        {sideName(b.side)}
-                      </span>
-                    </div>
-                    <div style={{ width: 56, fontSize: 11, fontWeight: 700, color: "#4F46E5", textAlign: "right", fontFamily: "'DM Mono', monospace" }}>
-                      ⚽{b.amount.toLocaleString()}
-                    </div>
-                    <div style={{ width: 68, textAlign: "right" }}>
-                      {match.result ? (
-                        <>
+                  <div key={b.id || i}>
+                    <div style={{
+                      display: "flex", alignItems: "center", padding: "9px 12px",
+                      borderBottom: i < arr.length - 1 ? "1px solid #F9FAFB" : "none",
+                      background: isWinner ? "#F0FDF4" : isLoser ? "#FEF2F2" : "#fff",
+                    }}>
+                      <div style={{ flex: 1, fontSize: 12, fontWeight: 700, color: "#1F2937", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        {isWinner && "🎉 "}{isLoser && "💔 "}{b.name}
+                      </div>
+                      <div style={{ width: 64, textAlign: "center" }}>
+                        <span style={{ fontSize: 10, padding: "2px 6px", borderRadius: 6, fontWeight: 700, background: sideColors[b.side]?.bg || "#F3F4F6", color: sideColors[b.side]?.color || "#6B7280" }}>
+                          {sideName(b.side)}
+                        </span>
+                      </div>
+                      <div style={{ width: 56, fontSize: 11, fontWeight: 700, color: "#4F46E5", textAlign: "right", fontFamily: "'DM Mono', monospace" }}>
+                        ⚽{b.amount.toLocaleString()}
+                      </div>
+                      <div style={{ width: isAdmin ? 36 : 68, textAlign: "right" }}>
+                        {match.result ? (
                           <div style={{ fontSize: 11, fontWeight: 800, color: isWinner ? "#16A34A" : "#DC2626", fontFamily: "'DM Mono', monospace" }}>
-                            {isWinner ? `⚽${b.payout.toLocaleString()}` : "⚽0"}
-                          </div>
-                          <div style={{ fontSize: 9, color: actualProfit >= 0 ? "#16A34A" : "#DC2626", fontFamily: "'DM Mono', monospace" }}>
                             {actualProfit >= 0 ? "+" : ""}{actualProfit.toLocaleString()}
                           </div>
-                        </>
-                      ) : (
-                        <>
+                        ) : (
                           <div style={{ fontSize: 11, fontWeight: 800, color: "#16A34A", fontFamily: "'DM Mono', monospace" }}>⚽{b.payout.toLocaleString()}</div>
-                          <div style={{ fontSize: 9, color: b.profit >= 0 ? "#16A34A" : "#DC2626", fontFamily: "'DM Mono', monospace" }}>{b.profit >= 0 ? "+" : ""}{b.profit.toLocaleString()}</div>
-                        </>
+                        )}
+                      </div>
+                      {isAdmin && b.id && (
+                        <div style={{ width: 50, display: "flex", gap: 4, justifyContent: "flex-end" }}>
+                          <button onClick={() => { setEditingBet(isEditing ? null : b.id); setEditName(b.name); setEditAmount(String(b.amount)); }} style={{
+                            padding: "2px 6px", borderRadius: 4, border: "1px solid #E5E7EB", background: "#fff",
+                            fontSize: 9, color: "#6B7280", cursor: "pointer", fontFamily: "inherit",
+                          }}>編集</button>
+                          <button onClick={() => { if (confirm(`${b.name}のベット(⚽${b.amount})を削除しますか？`)) onDeleteBet(b.id); }} style={{
+                            padding: "2px 6px", borderRadius: 4, border: "1px solid #FCA5A5", background: "#FEF2F2",
+                            fontSize: 9, color: "#DC2626", cursor: "pointer", fontFamily: "inherit",
+                          }}>×</button>
+                        </div>
                       )}
                     </div>
+                    {/* Edit form */}
+                    {isAdmin && isEditing && (
+                      <div style={{ padding: "8px 12px", background: "#FFFBEB", borderBottom: "1px solid #FDE68A", display: "flex", gap: 6, alignItems: "center" }}>
+                        <input value={editName} onChange={e => setEditName(e.target.value)} placeholder="名前"
+                          style={{ flex: 1, padding: "6px 8px", borderRadius: 6, border: "1px solid #E5E7EB", fontSize: 11, fontFamily: "inherit", minWidth: 0 }} />
+                        <input value={editAmount} onChange={e => setEditAmount(e.target.value)} type="number" placeholder="金額"
+                          style={{ width: 70, padding: "6px 8px", borderRadius: 6, border: "1px solid #E5E7EB", fontSize: 11, fontFamily: "'DM Mono', monospace" }} />
+                        <button onClick={() => { onEditBet(b.id, editName.trim(), parseInt(editAmount)); setEditingBet(null); }} style={{
+                          padding: "6px 10px", borderRadius: 6, border: "none", background: "#D97706", color: "#fff",
+                          fontSize: 10, fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
+                        }}>保存</button>
+                        <button onClick={() => setEditingBet(null)} style={{
+                          padding: "6px 8px", borderRadius: 6, border: "1px solid #E5E7EB", background: "#fff",
+                          fontSize: 10, color: "#6B7280", cursor: "pointer", fontFamily: "inherit",
+                        }}>×</button>
+                      </div>
+                    )}
                   </div>
                 );
               })}
@@ -986,6 +1025,22 @@ export default function App() {
     if (!error) { showToast("結果を確定しました！"); loadMatches(); }
   };
 
+  const handleClearResult = async (matchId) => {
+    const { error } = await supabase.from("matches").update({ result: null }).eq("id", matchId);
+    if (!error) { showToast("結果を取り消しました"); loadMatches(); }
+  };
+
+  const handleDeleteBet = async (betId) => {
+    const { error } = await supabase.from("bets").delete().eq("id", betId);
+    if (!error) { showToast("ベットを削除しました"); loadData(); }
+  };
+
+  const handleEditBet = async (betId, userName, amount) => {
+    if (!userName || !amount || amount <= 0) return;
+    const { error } = await supabase.from("bets").update({ user_name: userName, amount }).eq("id", betId);
+    if (!error) { showToast("ベットを修正しました"); loadData(); }
+  };
+
   const stageOrder = ["group"];
   const groupedMatches = {};
   matches.forEach(m => { if (!groupedMatches[m.stage]) groupedMatches[m.stage] = []; groupedMatches[m.stage].push(m); });
@@ -1053,7 +1108,7 @@ export default function App() {
                 {icons[stage]} {STAGE_LABELS[stage]}
               </div>
               {sm.map(match => (
-                <MatchCard key={match.id} match={match} bets={rawBets} pick={matchPick} onPick={handleMatchPick} onBet={handleMatchBet} isAdmin={isAdmin} onSetResult={handleSetResult} />
+                <MatchCard key={match.id} match={match} bets={rawBets} pick={matchPick} onPick={handleMatchPick} onBet={handleMatchBet} isAdmin={isAdmin} onSetResult={handleSetResult} onClearResult={handleClearResult} onDeleteBet={handleDeleteBet} onEditBet={handleEditBet} />
               ))}
             </div>
           );
